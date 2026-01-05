@@ -9,10 +9,6 @@ import {
   ArrowRightLeft,
   Loader2,
   Sparkles,
-  Search,
-  X,
-  Check,
-  Copy,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -62,6 +58,16 @@ export default function Home() {
 
   useEffect(() => {
     fetchTokenList().then(setTokens);
+    const handleOpenTokenSelector = () => {
+      setModalSource("pay");
+      setSearchQuery("");
+    };
+    window.addEventListener("open-token-selector", handleOpenTokenSelector);
+    return () =>
+      window.removeEventListener(
+        "open-token-selector",
+        handleOpenTokenSelector
+      );
   }, []);
 
   useEffect(() => {
@@ -98,7 +104,7 @@ export default function Home() {
       const toToken = activeTab === "buy" ? tokenA : tokenB;
       const weiAmount = toWei(amount, fromToken.decimals);
       const res = await fetch(
-        `/api/quote?fromToken=${fromToken.symbol}&toToken=${toToken.symbol}&amount=${weiAmount}`
+        `/api/quote?tokenIn=${fromToken.address}&tokenOut=${toToken.address}&amount=${weiAmount}`
       );
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -112,6 +118,13 @@ export default function Home() {
 
   const currentPayToken = activeTab === "buy" ? tokenB : tokenA;
   const currentReceiveToken = activeTab === "buy" ? tokenA : tokenB;
+
+  const payTokenPrice =
+    currentPayToken.symbol === "USDT" || currentPayToken.symbol === "USDC"
+      ? 1
+      : poolInfo
+      ? parseFloat(poolInfo.priceUsd)
+      : 0;
 
   const handleSelectToken = (token: TokenInfo) => {
     if (modalSource === "chart") setTokenA(token);
@@ -132,7 +145,7 @@ export default function Home() {
 
   return (
     <div className="container mx-auto p-4 lg:p-6 max-w-7xl min-h-screen flex flex-col gap-2 font-sans relative">
-      {/* ✅ 1. Global Header: 보더/배경 완전 제거 (순수 텍스트) */}
+      {/* 1. Header */}
       <div className="flex flex-col md:flex-row justify-between items-end md:items-center px-4 py-2 z-20">
         <div className="flex items-center gap-4">
           <button
@@ -144,14 +157,14 @@ export default function Home() {
                 <img
                   src={tokenA.logoURI}
                   alt={tokenA.symbol}
-                  className="h-12 w-12 rounded-full shadow-md group-hover:scale-105 transition-transform"
+                  className="h-12 w-12 rounded-full shadow-md group-hover:scale-105 transition-transform bg-white"
                 />
               ) : (
                 <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xl shadow-lg">
                   {tokenA.symbol[0]}
                 </div>
               )}
-              <div className="absolute -bottom-1 -right-1 bg-gray-100 dark:bg-zinc-800 rounded-full p-0.5 border border-white/10">
+              <div className="absolute -bottom-1 -right-1 bg-white dark:bg-zinc-800 rounded-full p-0.5 shadow-sm">
                 <ChevronDown className="w-3 h-3 text-gray-500" />
               </div>
             </div>
@@ -182,9 +195,7 @@ export default function Home() {
         <div className="text-right mt-4 md:mt-0">
           <div className="flex flex-col items-end">
             <span className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">
-              {poolInfo
-                ? `Uniswap V3 • ${poolInfo.labels?.[2] || 0.3}%`
-                : "Loading..."}
+              Uniswap V3
             </span>
             <motion.p
               key={poolInfo?.priceUsd}
@@ -209,8 +220,8 @@ export default function Home() {
 
       {/* 2. Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-[650px]">
-        {/* [왼쪽] 차트 영역 */}
-        <div className="lg:col-span-2 flex flex-col h-[500px] lg:h-full rounded-[2rem] bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/20 dark:border-white/5 overflow-hidden shadow-sm relative">
+        {/* [왼쪽] 차트 영역: relative 적용 (배경 없음, 차트만 떠있는 느낌) */}
+        <div className="lg:col-span-2 flex flex-col h-[500px] lg:h-full relative overflow-hidden">
           {isChartLoading ? (
             <div className="absolute inset-0 flex items-center justify-center text-gray-400 gap-2">
               <Loader2 className="animate-spin" /> Loading...
@@ -231,20 +242,20 @@ export default function Home() {
           )}
         </div>
 
-        {/* [오른쪽] 스왑 패널 (공간 확보를 위해 패딩 줄임) */}
+        {/* [오른쪽] 스왑 패널: glass-panel 적용 */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="lg:col-span-1 h-full rounded-[2rem] bg-white/70 dark:bg-[#1c1c1e]/60 backdrop-blur-2xl border border-white/20 dark:border-white/10 p-5 shadow-2xl flex flex-col relative overflow-hidden"
+          className="lg:col-span-1 h-full rounded-[2rem] glass-panel p-5 flex flex-col relative overflow-hidden"
         >
-          {/* 오로라 배경 */}
+          {/* 오로라 배경 (은은하게) */}
           <div
-            className={`absolute -top-20 -right-20 w-40 h-40 rounded-full blur-[80px] opacity-20 pointer-events-none transition-colors duration-500 ${
+            className={`absolute -top-32 -right-32 w-64 h-64 rounded-full blur-[100px] opacity-30 pointer-events-none transition-colors duration-500 ${
               activeTab === "buy" ? "bg-green-400" : "bg-red-400"
             }`}
           />
 
-          {/* 1. Buy/Sell 탭 (마진 축소: mb-6 -> mb-3) */}
+          {/* 1. Buy/Sell 탭 */}
           <div className="mb-3 shrink-0">
             <GlassTabs
               layoutId="trade-tab"
@@ -269,20 +280,19 @@ export default function Home() {
             />
           </div>
 
-          {/* 2. 입력 폼 영역 (간격 축소: gap-3 -> gap-2) */}
+          {/* 2. 입력 폼 영역 */}
           <div className="flex-1 flex flex-col justify-start gap-2">
-            {/* Pay Input (패딩 축소: p-5 -> p-4) */}
+            {/* Pay Input */}
             <div
-              className={`bg-gray-50 dark:bg-black/20 rounded-[1.5rem] px-5 py-4 border border-gray-100 dark:border-white/5 focus-within:ring-2 ring-blue-500/20 transition-all relative flex flex-col ${
+              className={`glass-input rounded-[1.5rem] px-5 py-4 focus-within:ring-2 ring-blue-500/20 transition-all relative flex flex-col ${
                 orderType === "limit" ? "gap-1" : "gap-0"
               }`}
             >
-              {/* 헤더 & 토글 */}
               <div className="flex justify-between items-center mb-1">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
                   Pay with
                 </span>
-                <div className="flex bg-gray-200 dark:bg-white/10 rounded-lg p-0.5">
+                <div className="flex gap-1 bg-black/5 dark:bg-white/5 rounded-lg p-1">
                   {["market", "limit"].map((type) => (
                     <button
                       key={type}
@@ -290,7 +300,7 @@ export default function Home() {
                       className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${
                         orderType === type
                           ? "bg-white dark:bg-gray-600 shadow-sm text-black dark:text-white"
-                          : "text-gray-400"
+                          : "text-gray-400 hover:text-gray-600"
                       }`}
                     >
                       {type}
@@ -299,7 +309,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* 입력창 & 토큰 버튼 */}
               <div className="flex items-center justify-between gap-3">
                 <input
                   type="number"
@@ -310,12 +319,12 @@ export default function Home() {
                 />
                 <button
                   onClick={() => setModalSource("pay")}
-                  className="flex items-center gap-2 bg-white dark:bg-zinc-800 pl-2 pr-4 py-2 rounded-full shadow-sm hover:scale-105 transition-transform shrink-0 border border-gray-100 dark:border-white/5"
+                  className="glass-btn flex items-center gap-2 pl-2 pr-4 py-2 rounded-full shrink-0"
                 >
                   {currentPayToken.logoURI && (
                     <img
                       src={currentPayToken.logoURI}
-                      className="w-6 h-6 rounded-full"
+                      className="w-6 h-6 rounded-full bg-white"
                     />
                   )}
                   <span className="font-bold text-sm">
@@ -325,14 +334,14 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* ✅ 지정가 입력 (Limit일 때만 등장, 공간 절약을 위해 아주 타이트하게 배치) */}
+              {/* 지정가 입력 */}
               <AnimatePresence>
                 {orderType === "limit" && (
                   <motion.div
                     initial={{ height: 0, opacity: 0, marginTop: 0 }}
                     animate={{ height: "auto", opacity: 1, marginTop: 8 }}
                     exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                    className="overflow-hidden border-t border-gray-200 dark:border-white/10 pt-2"
+                    className="overflow-hidden border-t border-black/5 dark:border-white/5 pt-2"
                   >
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-blue-500 font-bold uppercase">
@@ -351,15 +360,15 @@ export default function Home() {
               </AnimatePresence>
             </div>
 
-            {/* 화살표 (공간 절약) */}
+            {/* 화살표 */}
             <div className="flex justify-center -my-3 relative z-10">
-              <div className="bg-white dark:bg-[#2c2c2e] p-1.5 rounded-xl border border-gray-100 dark:border-white/10 shadow-lg">
+              <div className="glass-btn p-2 rounded-xl">
                 <ArrowRightLeft className="w-3 h-3 text-gray-500 rotate-90" />
               </div>
             </div>
 
-            {/* Receive Input (패딩 축소: p-5 -> p-4) */}
-            <div className="bg-gray-50 dark:bg-black/20 rounded-[1.5rem] px-5 py-4 border border-gray-100 dark:border-white/5">
+            {/* Receive Input */}
+            <div className="glass-input rounded-[1.5rem] px-5 py-4">
               <div className="flex justify-between text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">
                 <span>Receive (Est.)</span>
               </div>
@@ -386,13 +395,13 @@ export default function Home() {
                   />
                 )}
                 <div
-                  className="flex items-center gap-2 opacity-80 cursor-pointer hover:opacity-100 transition-opacity"
+                  className="glass-btn flex items-center gap-2 pl-2 pr-4 py-2 rounded-full shrink-0 cursor-pointer hover:opacity-80"
                   onClick={() => setModalSource("receive")}
                 >
                   {currentReceiveToken.logoURI && (
                     <img
                       src={currentReceiveToken.logoURI}
-                      className="w-5 h-5 rounded-full"
+                      className="w-5 h-5 rounded-full bg-white"
                     />
                   )}
                   <span className="font-bold text-sm">
@@ -404,7 +413,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 3. 상세 정보 (여백 축소) */}
+          {/* 3. 상세 정보 */}
           <div className="mt-3 mb-3 space-y-2 px-1 shrink-0 text-xs font-medium text-gray-500">
             <div className="flex justify-between">
               <span className="flex items-center gap-1">
@@ -423,12 +432,6 @@ export default function Home() {
               </span>
             </div>
             <div className="flex justify-between">
-              <span>Max Slippage</span>
-              <span className="text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-white/10 px-1.5 rounded font-semibold">
-                Auto (0.5%)
-              </span>
-            </div>
-            <div className="flex justify-between">
               <span>Network Fee</span>
               <span className="text-blue-500 font-bold flex items-center gap-1">
                 Free <Sparkles className="w-3 h-3" />
@@ -436,32 +439,47 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 4. 구매 버튼 (하단 고정) */}
+          {/* 4. 구매 버튼 (Solid Gradient, not glass-btn) */}
           <div className="mt-auto shrink-0">
+            {/* Total Spend */}
             <div className="flex justify-between items-end mb-2 px-1">
               <span className="text-sm font-bold text-gray-500">
                 Total Spend
               </span>
-              <span className="text-lg font-black tracking-tight tabular-nums">
-                $
-                {amount && poolInfo
-                  ? (
-                      parseFloat(amount) *
-                      (activeTab === "buy" ? 1 : parseFloat(poolInfo.priceUsd))
-                    ).toLocaleString()
-                  : "0.00"}
-              </span>
+              <div className="text-right">
+                <div className="text-lg font-black tracking-tight tabular-nums">
+                  $
+                  {amount
+                    ? (parseFloat(amount) * payTokenPrice).toLocaleString(
+                        undefined,
+                        {
+                          maximumFractionDigits: 2,
+                        }
+                      )
+                    : "0.00"}
+                </div>
+                {amount && (
+                  <div className="text-[10px] text-gray-400 font-semibold">
+                    {amount} {currentPayToken.symbol} × $
+                    {payTokenPrice.toLocaleString()}
+                  </div>
+                )}
+              </div>
             </div>
 
+            {/* 버튼: 불투명도 제거 (/90 -> solid) 및 glass-btn 제거 */}
             <button
-              className={`w-full py-4 rounded-[1.2rem] text-xl font-bold text-white shadow-xl transition-all active:scale-[0.98] relative overflow-hidden group ${
+              className={`w-full py-4 rounded-[1.2rem] text-xl font-bold text-white shadow-xl transition-all active:scale-[0.98] relative overflow-hidden group border border-white/20 ${
                 activeTab === "buy"
-                  ? "bg-gradient-to-r from-green-500 to-emerald-600 shadow-green-500/20"
-                  : "bg-gradient-to-r from-red-500 to-rose-600 shadow-red-500/20"
+                  ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500"
+                  : "bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500"
               }`}
             >
+              {/* 상단 빛 반사 효과 */}
+              <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-md" />
-              <span className="relative z-10 flex items-center justify-center gap-2">
+
+              <span className="relative z-10 flex items-center justify-center gap-2 drop-shadow-md">
                 {activeTab === "buy" ? "Buy" : "Sell"} {tokenA.symbol}
               </span>
             </button>

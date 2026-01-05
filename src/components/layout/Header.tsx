@@ -29,8 +29,13 @@ export default function Header() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
+              readOnly
+              onClick={() => {
+                // [추가] 검색창 클릭 시 메인 페이지의 토큰 선택 모달 열기 이벤트 발생
+                window.dispatchEvent(new Event("open-token-selector"));
+              }}
               placeholder="Search token (e.g. BTC, ETH)"
-              className="w-full h-10 rounded-full bg-gray-100 dark:bg-zinc-900 border border-transparent focus:border-blue-500 px-10 text-sm outline-none transition-all placeholder-gray-500 dark:text-white"
+              className="w-full h-10 rounded-full bg-gray-100 dark:bg-zinc-900 border border-transparent focus:border-blue-500 px-10 text-sm outline-none transition-all placeholder-gray-500 dark:text-white cursor-pointer hover:bg-gray-200 dark:hover:bg-zinc-800"
             />
           </div>
         </div>
