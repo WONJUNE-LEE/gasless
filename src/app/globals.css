@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+
+  --header-bg: rgba(255, 255, 255, 0.85);
+  --border-color: #e5e7eb;
+  --card-bg: #ffffff;
+  --input-bg: #f3f4f6; /* 연한 회색 박스 */
+
+  /* 미국식 컬러 (Up=Green, Down=Red) */
+  --color-up: #22c55e; /* Green 500 */
+  --color-down: #ef4444; /* Red 500 */
+}
+
+.dark {
+  --background: #000000;
+  --foreground: #ededed;
+
+  --header-bg: rgba(0, 0, 0, 0.8);
+  --border-color: #27272a;
+  --card-bg: #121212;
+  --input-bg: #1e1e20; /* 짙은 회색 박스 */
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* 유틸리티 */
+.glass-panel {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+}
+
+/* 숫자 전용 폰트 세팅 (숫자가 튀지 않게) */
+.tabular-nums {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
