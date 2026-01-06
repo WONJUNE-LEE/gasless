@@ -1,4 +1,4 @@
-// src/app/api/quote/route.ts
+// src/app/api/tokens/route.ts
 
 import { NextResponse } from "next/server";
 import { createHmac } from "crypto";
@@ -33,27 +33,17 @@ function generateOkxHeaders(
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const tokenIn = searchParams.get("tokenIn");
-  const tokenOut = searchParams.get("tokenOut");
-  const amount = searchParams.get("amount");
-  const chainId = searchParams.get("chainId") || "42161"; // 체인 ID도 파라미터로 받음
-
-  if (!tokenIn || !tokenOut || !amount) {
-    return NextResponse.json({ error: "Missing params" }, { status: 400 });
-  }
+  const chainId = searchParams.get("chainId") || "42161"; // Default Arbitrum
 
   if (!process.env.OKX_API_KEY) {
-    return NextResponse.json({ error: "Server Key Error" }, { status: 500 });
+    return NextResponse.json({ error: "API Key missing" }, { status: 500 });
   }
 
   try {
-    const endpoint = "/api/v5/dex/aggregator/quote";
+    // OKX Aggregator Token List API
+    const endpoint = "/api/v5/dex/aggregator/all-tokens";
     const queryParams = new URLSearchParams({
       chainId: chainId,
-      amount: amount,
-      fromTokenAddress: tokenIn,
-      toTokenAddress: tokenOut,
-      options: "2",
     });
 
     const queryString = "?" + queryParams.toString();
@@ -70,28 +60,21 @@ export async function GET(request: Request) {
       throw new Error(data.msg || "OKX API Error");
     }
 
-    const result = data.data[0];
+    // 데이터 포맷 정규화
+    const tokens = data.data.map((t: any) => ({
+      chainId: parseInt(chainId),
+      address: t.tokenContractAddress,
+      name: t.tokenName,
+      symbol: t.tokenSymbol,
+      decimals: parseInt(t.decimals),
+      logoURI: t.tokenLogoUrl,
+    }));
 
-    // [수정] DEX 이름 추출 로직 강화
-    // routerResult 예시: "100% Uniswap V3" 또는 복잡한 JSON 문자열일 수 있음
-    let dexName = "Aggregator";
-    if (result.routerResult) {
-      // 간단히 텍스트가 포함되어 있으면 그것을 사용
-      dexName = result.routerResult;
-    } else if (result.dexName) {
-      dexName = result.dexName;
-    }
-
-    return NextResponse.json({
-      dstAmount: result.toTokenAmount,
-      gasCost: result.txFee || "0",
-      priceImpact: result.priceImpact || "0",
-      router: dexName, // Route UI에 표시될 이름
-    });
+    return NextResponse.json(tokens);
   } catch (error: any) {
-    console.error("OKX Quote Error:", error);
+    console.error("OKX Token List Error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch quote", details: error.message },
+      { error: "Failed to fetch tokens", details: error.message },
       { status: 500 }
     );
   }

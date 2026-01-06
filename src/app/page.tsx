@@ -13,12 +13,17 @@ import {
   Droplets,
   BarChart2,
   Layers,
-  Route as RouteIcon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toWei, fromWei } from "@/lib/utils";
-import { fetchTokenList, findBestPool, fetchOHLCV, TokenInfo } from "@/lib/api";
+import {
+  findBestPool,
+  fetchOHLCV,
+  TokenInfo,
+  CHAINS,
+  DEFAULT_TOKENS,
+} from "@/lib/api";
 import NativeChart from "@/components/dex/NativeChart";
 import TokenSelector from "@/components/dex/TokenSelector";
 
@@ -40,10 +45,9 @@ const DEFAULT_TOKEN_B: TokenInfo = {
 };
 
 export default function Home() {
-  const [tokens, setTokens] = useState<TokenInfo[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [tokenA, setTokenA] = useState<TokenInfo>(DEFAULT_TOKEN_A);
-  const [tokenB, setTokenB] = useState<TokenInfo>(DEFAULT_TOKEN_B);
+  const [chainId, setChainId] = useState(42161);
+  const [tokenA, setTokenA] = useState<TokenInfo>(DEFAULT_TOKENS[42161].A);
+  const [tokenB, setTokenB] = useState<TokenInfo>(DEFAULT_TOKENS[42161].B);
   const [modalSource, setModalSource] = useState<
     "chart" | "pay" | "receive" | null
   >(null);
@@ -61,11 +65,7 @@ export default function Home() {
   const [quoteLoading, setQuoteLoading] = useState(false);
 
   useEffect(() => {
-    fetchTokenList().then(setTokens);
-    const handleOpenTokenSelector = () => {
-      setModalSource("pay");
-      setSearchQuery("");
-    };
+    const handleOpenTokenSelector = () => setModalSource("pay");
     window.addEventListener("open-token-selector", handleOpenTokenSelector);
     return () =>
       window.removeEventListener(
@@ -74,13 +74,26 @@ export default function Home() {
       );
   }, []);
 
+  // [신규 추가] 체인 변경 시 해당 체인의 기본 토큰으로 리셋
+  // 이 로직이 없으면 Arbitrum 주소로 Ethereum에서 풀을 찾게 되어 가격 오류(USDT $6) 발생
+  useEffect(() => {
+    const defaults = DEFAULT_TOKENS[chainId];
+    if (defaults) {
+      setTokenA(defaults.A);
+      setTokenB(defaults.B);
+    }
+  }, [chainId]);
+
+  // [수정됨] 차트 로딩 로직
   useEffect(() => {
     const loadChart = async () => {
       setIsChartLoading(true);
-      const pool = await findBestPool(tokenA.address);
+      // [중요] chainId를 두 번째 인자로 전달!
+      const pool = await findBestPool(tokenA.address, chainId);
+
       if (pool) {
         setPoolInfo(pool);
-        const candles = await fetchOHLCV(pool.pairAddress, timeframe);
+        const candles = await fetchOHLCV(pool.pairAddress, timeframe, chainId);
         setChartData(candles);
         if (!limitPrice) setLimitPrice(parseFloat(pool.priceUsd).toString());
       } else {
@@ -90,7 +103,7 @@ export default function Home() {
       setIsChartLoading(false);
     };
     loadChart();
-  }, [tokenA, timeframe]);
+  }, [tokenA, timeframe, chainId]);
 
   useEffect(() => {
     setQuoteData(null);
@@ -109,7 +122,7 @@ export default function Home() {
       const weiAmount = toWei(amount, fromToken.decimals);
 
       const res = await fetch(
-        `/api/quote?tokenIn=${fromToken.address}&tokenOut=${toToken.address}&amount=${weiAmount}`
+        `/api/quote?tokenIn=${fromToken.address}&tokenOut=${toToken.address}&amount=${weiAmount}&chainId=${chainId}`
       );
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -123,8 +136,6 @@ export default function Home() {
 
   const currentPayToken = activeTab === "buy" ? tokenB : tokenA;
   const currentReceiveToken = activeTab === "buy" ? tokenA : tokenB;
-
-  // Total Cost 계산용 가격 (USDT/USDC는 1달러 고정, 그 외는 풀 가격 참조)
   const payTokenPrice =
     currentPayToken.symbol === "USDT" || currentPayToken.symbol === "USDC"
       ? 1
@@ -139,39 +150,45 @@ export default function Home() {
     else if (modalSource === "receive")
       activeTab === "buy" ? setTokenA(token) : setTokenB(token);
     setModalSource(null);
-    setSearchQuery("");
     setAmount("");
   };
 
-  const filteredTokens = tokens.filter(
-    (t) =>
-      t.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const currentChain = CHAINS.find((c) => c.id === chainId) || CHAINS[0];
 
   return (
     <div className="container mx-auto p-4 lg:p-8 max-w-7xl min-h-screen flex flex-col gap-6">
-      {/* 1. Header & Pool Summary */}
+      {/* 1. Header */}
       <div className="flex flex-col md:flex-row justify-between items-end md:items-center px-2 z-20">
-        <button
-          onClick={() => setModalSource("chart")}
-          className="flex items-center gap-4 group outline-none"
-        >
-          {tokenA.logoURI && (
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/5 backdrop-blur-md">
             <img
-              src={tokenA.logoURI}
-              className="w-10 h-10 rounded-full bg-white/10 shadow-lg group-hover:scale-110 transition-transform"
+              src={currentChain.logo}
+              alt={currentChain.name}
+              className="w-5 h-5 rounded-full"
             />
-          )}
-          <div className="text-left">
-            <h1 className="text-3xl font-black flex items-center gap-2 text-white tracking-tight">
-              {tokenA.symbol}
-              <span className="text-gray-500 text-lg font-bold">/ USD</span>
-              <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" />
-            </h1>
+            <span className="text-sm font-bold text-gray-200">
+              {currentChain.name}
+            </span>
           </div>
-        </button>
-
+          <button
+            onClick={() => setModalSource("chart")}
+            className="flex items-center gap-3 group outline-none"
+          >
+            {tokenA.logoURI && (
+              <img
+                src={tokenA.logoURI}
+                className="w-10 h-10 rounded-full bg-white/10 shadow-lg group-hover:scale-110 transition-transform"
+              />
+            )}
+            <div className="text-left">
+              <h1 className="text-3xl font-black flex items-center gap-2 text-white tracking-tight">
+                {tokenA.symbol}
+                <span className="text-gray-500 text-lg font-bold">/ USD</span>
+                <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" />
+              </h1>
+            </div>
+          </button>
+        </div>
         <div className="text-right mt-4 md:mt-0">
           <div className="text-4xl font-black tabular-nums tracking-tight text-white drop-shadow-sm">
             ${poolInfo ? parseFloat(poolInfo.priceUsd).toLocaleString() : "---"}
@@ -191,20 +208,16 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 2. Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-auto lg:h-[600px]">
+      {/* 2. Main Grid: Swap Panel의 높이 제한 해제 (items-start 사용) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* [Left] Chart Area */}
-        <div className="lg:col-span-2 relative rounded-3xl overflow-hidden bg-white/5 border border-white/5 shadow-xl h-[500px] lg:h-full flex flex-col">
+        <div className="lg:col-span-2 relative rounded-3xl overflow-hidden bg-white/5 border border-white/5 shadow-xl h-[650px] flex flex-col">
           <div className="flex justify-between items-start p-4 z-10">
             {poolInfo ? (
               <div className="flex gap-4 text-xs font-medium text-gray-400">
                 <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
                   <Layers className="w-3 h-3 text-white" />
-                  <span>
-                    {poolInfo.dexId === "uniswap"
-                      ? "Uniswap V3"
-                      : poolInfo.dexId}
-                  </span>
+                  <span>{poolInfo.dexId}</span>
                 </div>
                 <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
                   <Droplets className="w-3 h-3 text-blue-400" />
@@ -224,7 +237,6 @@ export default function Home() {
             ) : (
               <div className="text-xs text-gray-600">Loading Pool Info...</div>
             )}
-
             <div className="flex bg-black/30 rounded-lg p-1 border border-white/5 backdrop-blur-md">
               {["1H", "4H", "1D", "1W"].map((tf) => (
                 <button
@@ -241,7 +253,6 @@ export default function Home() {
               ))}
             </div>
           </div>
-
           <div className="flex-1 relative w-full">
             {isChartLoading ? (
               <div className="absolute inset-0 flex items-center justify-center text-gray-500 font-medium">
@@ -265,20 +276,19 @@ export default function Home() {
           </div>
         </div>
 
-        {/* [Right] Swap Panel */}
+        {/* [Right] Swap Panel: h-fit 및 min-h 사용으로 내용물에 맞게 늘어남 */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-1 glass-panel rounded-3xl p-6 flex flex-col relative overflow-hidden"
+          className="lg:col-span-1 glass-panel rounded-3xl p-6 flex flex-col relative overflow-hidden h-fit min-h-[600px]"
         >
-          {/* 오로라 배경 */}
           <div
             className={`absolute -top-32 -right-32 w-64 h-64 rounded-full blur-[100px] opacity-15 pointer-events-none transition-colors duration-500 ${
               activeTab === "buy" ? "bg-green-500" : "bg-red-500"
             }`}
           />
 
-          {/* Tab Switcher */}
+          {/* Tabs */}
           <div className="flex bg-black/20 p-1 rounded-xl mb-6 relative border border-white/5 h-12 shrink-0">
             {["buy", "sell"].map((mode) => (
               <button
@@ -306,14 +316,19 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Inputs Area */}
+          {/* Inputs */}
           <div className="flex flex-col gap-2 relative z-10">
-            {/* [수정] Pay Input: layout 속성으로 높이 애니메이션 적용 */}
             <motion.div
               layout
-              className="input-well p-4 flex flex-col gap-3 relative transition-colors hover:border-white/10"
+              className={`input-well p-4 flex flex-col relative transition-colors hover:border-white/10 min-h-[170px] ${
+                orderType === "market" ? "justify-center" : "justify-between"
+              }`}
             >
-              <div className="flex justify-between text-xs font-bold text-gray-500 tracking-wide">
+              <div
+                className={`flex justify-between text-xs font-bold text-gray-500 tracking-wide ${
+                  orderType === "market" ? "mb-4" : ""
+                }`}
+              >
                 <span>YOU PAY</span>
                 <div className="flex gap-3">
                   <span
@@ -338,15 +353,12 @@ export default function Home() {
                   </span>
                 </div>
               </div>
-
-              {/* Amount & Token */}
               <div className="flex justify-between items-center gap-2">
                 <input
                   type="number"
                   placeholder="0"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  // [수정] 스피너 제거 스타일 적용됨 (globals.css)
                   className="bg-transparent text-3xl font-bold text-white outline-none w-full placeholder-gray-700 tabular-nums"
                 />
                 <button
@@ -365,17 +377,15 @@ export default function Home() {
                   <ChevronDown className="w-3 h-3 opacity-50 text-white" />
                 </button>
               </div>
-
-              {/* Limit Price Input (확장 애니메이션) */}
               <AnimatePresence>
                 {orderType === "limit" && (
                   <motion.div
-                    initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                    animate={{ opacity: 1, height: "auto", marginTop: 12 }}
-                    exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="pt-3 border-t border-white/5 flex justify-between items-center">
+                    <div className="pt-4 mt-2 border-t border-white/5 flex justify-between items-center">
                       <span className="text-xs text-blue-400 font-bold">
                         Target Price
                       </span>
@@ -392,14 +402,12 @@ export default function Home() {
               </AnimatePresence>
             </motion.div>
 
-            {/* Arrow */}
             <div className="flex justify-center -my-5 relative z-20 pointer-events-none">
               <div className="bg-[#1a1c23] border border-white/10 p-2 rounded-xl text-gray-400 shadow-xl">
                 <ArrowRightLeft className="w-4 h-4 rotate-90 text-white" />
               </div>
             </div>
 
-            {/* Receive Input */}
             <div className="input-well p-4 flex flex-col gap-3 pt-6 min-h-[110px] justify-center">
               <div className="text-xs font-bold text-gray-500 tracking-wide">
                 YOU RECEIVE
@@ -437,15 +445,15 @@ export default function Home() {
             </div>
           </div>
 
-          {/* [복구됨] Detailed Info Section (요청사항 3, 4번) */}
-          <div className="mt-4 flex flex-col gap-4 relative z-10 flex-1 justify-end">
-            <div className="px-2 space-y-2">
-              {/* Rate & Route */}
+          {/* Info Section (항상 표시되도록 함) */}
+          <div className="mt-6 flex flex-col gap-4 relative z-10 flex-1 justify-end border-t border-white/5 pt-4">
+            <div className="px-2 space-y-3">
+              {/* Rate */}
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
                 <span>Rate</span>
                 <span className="text-gray-300">
                   1 {currentPayToken.symbol} ≈{" "}
-                  {quoteData && amount
+                  {quoteData && amount && parseFloat(amount) > 0
                     ? (
                         parseFloat(
                           fromWei(
@@ -458,29 +466,27 @@ export default function Home() {
                   {currentReceiveToken.symbol}
                 </span>
               </div>
+
+              {/* [수정] Route: DEX 이름 강제 표시 */}
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
                 <span className="flex items-center gap-1">
                   Route <Info className="w-3 h-3" />
                 </span>
                 <span className="text-gray-300 flex items-center gap-1">
-                  {/* 라우팅 정보 표시 (없으면 단순 화살표) */}
                   {quoteData?.router ? (
-                    <span className="text-[10px] bg-white/5 px-1 rounded">
-                      {quoteData.router.length > 20
-                        ? "Optimized Route"
-                        : quoteData.router}
+                    <span className="text-[10px] bg-white/10 border border-white/5 px-1.5 py-0.5 rounded text-blue-300 font-bold">
+                      Via {quoteData.router}
                     </span>
                   ) : (
-                    <>
-                      {currentPayToken.symbol}{" "}
-                      <ArrowRight className="w-3 h-3" />{" "}
-                      {currentReceiveToken.symbol}
-                    </>
+                    /* 데이터 로딩 전이나 경로 없을 때 표시 */
+                    <span className="text-xs text-gray-600 flex items-center gap-1">
+                      Finding best route...
+                    </span>
                   )}
                 </span>
               </div>
 
-              {/* Price Impact & Slippage */}
+              {/* Price Impact */}
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
                 <span>Price Impact</span>
                 <span
@@ -488,9 +494,11 @@ export default function Home() {
                     quoteData ? "text-green-400" : "text-gray-500"
                   }`}
                 >
-                  {quoteData ? "~0.05%" : "-"}
+                  {quoteData?.priceImpact ? `${quoteData.priceImpact}%` : "-"}
                 </span>
               </div>
+
+              {/* Max Slippage */}
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
                 <span>Max Slippage</span>
                 <button className="flex items-center gap-1 bg-white/5 px-1.5 py-0.5 rounded text-gray-300 hover:text-white transition-colors">
@@ -506,7 +514,7 @@ export default function Home() {
                 </span>
               </div>
 
-              {/* [강조] Total Spend */}
+              {/* Total Cost */}
               <div className="flex justify-between items-center pt-3 mt-1 border-t border-white/5">
                 <span className="text-sm font-bold text-gray-400">
                   Total Cost
@@ -528,7 +536,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Buy/Sell Button */}
             <button
               className={`w-full py-4 rounded-xl text-lg font-black flex justify-center items-center gap-2 shadow-lg active:scale-[0.98] transition-transform ${
                 activeTab === "buy" ? "btn-buy" : "btn-sell"
@@ -543,10 +550,7 @@ export default function Home() {
       <TokenSelector
         isOpen={!!modalSource}
         onClose={() => setModalSource(null)}
-        tokens={filteredTokens}
         onSelect={handleSelectToken}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
         selectedToken={
           modalSource === "chart"
             ? tokenA
@@ -554,6 +558,8 @@ export default function Home() {
             ? currentPayToken
             : currentReceiveToken
         }
+        selectedChainId={chainId}
+        onSelectChain={setChainId}
       />
     </div>
   );
