@@ -1,0 +1,4131 @@
+Wallet API
+DEX API
+Swap API
+API Reference
+Get Supported Chains
+Get Supported Chains#
+Retrieve information on chains supported for single-chain exchanges. The request returns supported target chains for cross-chain transactions.
+
+Request URL#
+GET https://web3.okx.com/api/v6/dex/aggregator/supported/chain
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	No	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+Response Parameters#
+Parameter	Type	Description
+chainIndex	String	Unique identifier for the chain.
+chainName	String	Chain name (e.g., Optimism).
+dexTokenApproveAddress	String	DEX authorization contract address; if no authorization has been made, this field will be empty.
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/aggregator/supported/chain?chainIndex=1' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+    "code":"0",
+    "data":[
+          {
+            "chainIndex":"1",
+            "chainName":"Ethereum",
+            "dexTokenApproveAddress": "0x40aA958dd87FC8305b97f2BA922CDdCa374bcD7f"
+          },
+    ],
+    "msg":""
+  }
+
+
+Wallet API
+DEX API
+Swap API
+API Reference
+Get Tokens
+Get Tokens#
+It fetches a list of tokens. This interface returns a list of tokens that belong to major platforms or are deemed significant enough by OKX. However, you can still quote and swap other tokens outside of this list on OKX DEX.
+
+Request URL#
+GET https://web3.okx.com/api/v6/dex/aggregator/all-tokens
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	Yes	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+Response Parameters#
+Parameter	Type	Description
+decimals	String	The precision of tokens (e.g., 18)
+tokenContractAddress	String	Token contract address (e.g., 0x382bb369d343125bfb2117af9c149795c6c65c50)
+tokenLogoUrl	String	Token logo (e.g., https://static.okx.com/cdn/wallet/logo/USDT-991ffed9-e495-4d1b-80c2-a4c5f96ce22d.png)
+tokenName	String	Token full name (e.g., Tether)
+tokenSymbol	String	Token symbol (e.g., USDT)
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/aggregator/all-tokens?chainIndex=1' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+  "code": "0",
+  "data": [
+    {
+      "decimals": "18",
+      "tokenContractAddress": "0x382bb369d343125bfb2117af9c149795c6c65c50",
+      "tokenLogoUrl": "https://static.okx.com/cdn/wallet/logo/USDT-991ffed9-e495-4d1b-80c2-a4c5f96ce22d.png",
+      "tokenName": "Tether",
+      "tokenSymbol": "USDT"
+    },
+    {
+      "decimals": "18",
+      "tokenContractAddress": "0xc946daf81b08146b1c7a8da2a851ddf2b3eaaf85",
+      "tokenLogoUrl": "https://static.okx.com/cdn/explorer/okexchain/exchain_usdc.png",
+      "tokenName": "USD Coin",
+      "tokenSymbol": "USDC"
+    },
+    {
+      "decimals": "18",
+      "tokenContractAddress": "0xdf54b6c6195ea4d948d03bfd818d365cf175cfc2",
+      "tokenLogoUrl": "https://static.okx.com/cdn/wallet/logo/okb.png",
+      "tokenName": "OKB",
+      "tokenSymbol": "OKB"
+    },
+    {
+      "decimals": "18",
+      "tokenContractAddress": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+      "tokenLogoUrl": "https://static.okx.com/cdn/wallet/logo/okt.png",
+      "tokenName": "OKTC",
+      "tokenSymbol": "OKT"
+    },
+    {
+      "decimals": "18",
+      "tokenContractAddress": "0x218c3c3d49d0e7b37aff0d8bb079de36ae61a4c0",
+      "tokenLogoUrl": "https://static.okx.com/cdn/wallet/logo/BNB-20220308.png",
+      "tokenName": "Binance Coin",
+      "tokenSymbol": "BNB"
+    },
+    {
+      "decimals": "18",
+      "tokenContractAddress": "0x332730a4f6e03d9c55829435f10360e13cfa41ff",
+      "tokenLogoUrl": "https://static.okx.com/cdn/wallet/logo/BUSD-20220308.png",
+      "tokenName": "Binance USD",
+      "tokenSymbol": "BUSD"
+    },
+    {
+      "decimals": "18",
+      "tokenContractAddress": "0xdcac52e001f5bd413aa6ea83956438f29098166b",
+      "tokenLogoUrl": "https://static.okx.com/cdn/wallet/logo/eth_usdk.png",
+      "tokenName": "USDK",
+      "tokenSymbol": "USDK"
+    }
+  ],
+  "msg": ""
+}
+
+Wallet API
+DEX API
+Swap API
+API Reference
+Get Liquidity Sources
+Get Liquidity Sources#
+Get a list of liquidity that are available for swap in the OKX aggregation protocol.
+
+Request URL#
+GET https://web3.okx.com/api/v6/dex/aggregator/get-liquidity
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	Yes	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+Response Parameters#
+Parameter	Type	Description
+id	String	The id of the liquidity pool (e.g., 34)
+name	String	The name of the liquidity pool (e.g., Uniswap V2)
+logo	String	Liquidity Logo URL (e.g., https://static.okx.com/cdn/wallet/logo/UNI.png)
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/aggregator/get-liquidity?chainIndex=1' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+  "code": "0",
+  "data": [
+      {
+          "id": "34",
+          "logo": "https://static.okx.com/cdn/wallet/logo/UNI.png",
+          "name": "Uniswap V2"
+      },
+      {
+          "id": "29",
+          "logo": "https://static.okx.com/cdn/wallet/logo/SUSHI.png",
+          "name": "SushiSwap"
+      },
+      {
+          "id": "47",
+          "logo": "https://static.okx.com/cdn/explorer/dex/logo/Dex_DefiSwap.png",
+          "name": "DeFi Swap"
+      },
+      {
+          "id": "49",
+          "logo": "https://static.okx.com/cdn/wallet/logo/convxswap.png",
+          "name": "Convergence"
+      },
+      {
+          "id": "48",
+          "logo": "https://static.okx.com/cdn/wallet/logo/luaswap.png",
+          "name": "LuaSwap"
+      },
+      {
+          "id": "40",
+          "logo": "https://static.okx.com/cdn/wallet/logo/SHIB.png",
+          "name": "ShibaSwap"
+      },
+      {
+          "id": "30",
+          "logo": "https://static.okx.com/cdn/wallet/logo/pancake.png",
+          "name": "PancakeSwap"
+      },
+      {
+          "id": "53",
+          "logo": "https://static.okx.com/cdn/wallet/logo/UNI.png",
+          "name": "Uniswap V3"
+      },
+      {
+          "id": "54",
+          "logo": "https://static.okx.com/cdn/wallet/logo/balancer.png",
+          "name": "Balancer V1"
+      },
+      {
+          "id": "51",
+          "logo": "https://static.okx.com/cdn/wallet/logo/balancer.png",
+          "name": "Balancer V2"
+      },
+      {
+          "id": "55",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Curve.png",
+          "name": "Curve V1"
+      },
+      {
+          "id": "58",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Curve.png",
+          "name": "Curve V2"
+      },
+      {
+          "id": "52",
+          "logo": "https://static.okx.com/cdn/wallet/logo/bancor.png",
+          "name": "Bancor"
+      },
+      {
+          "id": "59",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Kyber.png",
+          "name": "Kyber"
+      },
+      {
+          "id": "81",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Synapse.png",
+          "name": "Synapse"
+      },
+      {
+          "id": "83",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Wombat.png",
+          "name": "Wombat"
+      },
+      {
+          "id": "80",
+          "logo": "https://static.okx.com/cdn/wallet/logo/DODO.png",
+          "name": "DODO"
+      },
+      {
+          "id": "82",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Shell.png",
+          "name": "Shell"
+      },
+      {
+          "id": "88",
+          "logo": "https://static.okx.com/cdn/wallet/logo/DODO.png",
+          "name": "DODO V2"
+      },
+      {
+          "id": "91",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Smoothy.png",
+          "name": "Smoothy"
+      },
+      {
+          "id": "92",
+          "logo": "https://static.okx.com/cdn/wallet/logo/RadioShack.png",
+          "name": "RadioShack"
+      },
+      {
+          "id": "90",
+          "logo": "https://static.okx.com/cdn/wallet/logo/ORION.png",
+          "name": "Orion"
+      },
+      {
+          "id": "89",
+          "logo": "https://static.okx.com/cdn/wallet/logo/FraxFinance.png",
+          "name": "FraxSwap"
+      },
+      {
+          "id": "99",
+          "logo": "https://static.okx.com/cdn/wallet/logo/okb.png",
+          "name": "OKX DEX"
+      },
+      {
+          "id": "101",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_Swapr.png",
+          "name": "Swapr"
+      },
+      {
+          "id": "351",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_DFX.png",
+          "name": "DFX Finance V3"
+      },
+      {
+          "id": "104",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_bancor.png",
+          "name": "Bancor V3"
+      },
+      {
+          "id": "105",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_PSM.png",
+          "name": "PSM"
+      },
+      {
+          "id": "108",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_Verse.png",
+          "name": "Verse"
+      },
+      {
+          "id": "248",
+          "logo": "https://static.okx.com/cdn/wallet/logo/okb.png",
+          "name": "OKX Limit Order"
+      },
+      {
+          "id": "132",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_defiplaza.png",
+          "name": "DefiPlaza"
+      },
+      {
+          "id": "114",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_Swerve.png",
+          "name": "Swerve"
+      },
+      {
+          "id": "113",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Kyber.png",
+          "name": "Kyber Elastic"
+      },
+      {
+          "id": "131",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_defiplaza.png",
+          "name": "StablePlaza"
+      },
+      {
+          "id": "134",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_Lido.png",
+          "name": "Lido"
+      },
+      {
+          "id": "135",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_NOMISWAP.png",
+          "name": "Nomiswap Stable"
+      },
+      {
+          "id": "136",
+          "logo": "https://static.okx.com/cdn/explorer/dex/logo/solidly.png",
+          "name": "Solidly"
+      },
+      {
+          "id": "215",
+          "logo": "https://static.okx.com/cdn/wallet/logo/traderjoexyz.png",
+          "name": "Trader Joe V2.1"
+      },
+      {
+          "id": "153",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Dex_Cafe_Swap.png",
+          "name": "Cafe Swap"
+      },
+      {
+          "id": "141",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Dex_ELK.png",
+          "name": "ELK"
+      },
+      {
+          "id": "102",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_Unifi.png",
+          "name": "Unifi"
+      },
+      {
+          "id": "159",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Dex_LINKSWAP.png",
+          "name": "LINKSWAP"
+      },
+      {
+          "id": "160",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Dex_Sake_Swap.png",
+          "name": "Sake Swap"
+      },
+      {
+          "id": "27",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Curve.png",
+          "name": "Curve 3CRV"
+      },
+      {
+          "id": "202",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Dex_Aave.png",
+          "name": "Aave V2"
+      },
+      {
+          "id": "230",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Dex_Aave.png",
+          "name": "Aave V3"
+      },
+      {
+          "id": "199",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Dex_Compound.png",
+          "name": "Compound"
+      },
+      {
+          "id": "266",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Dex_Compound.png",
+          "name": "Compound V3"
+      },
+      {
+          "id": "184",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_logo_Frax.png",
+          "name": "sfrxETH"
+      },
+      {
+          "id": "356",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_logo_Frax.png",
+          "name": "sFRAX"
+      },
+      {
+          "id": "186",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_Lido.png",
+          "name": "stMatic"
+      },
+      {
+          "id": "200",
+          "logo": "https://static.okx.com/cdn/wallet/logo/pancake.png",
+          "name": "PancakeSwap V3"
+      },
+      {
+          "id": "203",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Dex_Rocketpool.png",
+          "name": "RocketPool"
+      },
+      {
+          "id": "204",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_1inch_limit_order.png",
+          "name": "1inch LP v1.1"
+      },
+      {
+          "id": "210",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Curve.png",
+          "name": "Curve TNG"
+      },
+      {
+          "id": "330",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Curve.png",
+          "name": "CurveNG"
+      },
+      {
+          "id": "214",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_Mooniswap.png",
+          "name": "Mooniswap"
+      },
+      {
+          "id": "213",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_Integral.png",
+          "name": "Integral"
+      },
+      {
+          "id": "218",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_Maverick.png",
+          "name": "Maverick V1"
+      },
+      {
+          "id": "226",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Curve.png",
+          "name": "Curve LLAMMA"
+      },
+      {
+          "id": "234",
+          "logo": "https://static.okx.com/cdn/explorer/dex/logo/Dex_xSigma.png",
+          "name": "xSigma"
+      },
+      {
+          "id": "239",
+          "logo": "https://static.okx.com/cdn/explorer/dex/logo/Dex_Sushiswap_V3.png",
+          "name": "Sushiswap V3"
+      },
+      {
+          "id": "257",
+          "logo": "https://static.okx.com/cdn/explorer/dex/logo/Synthetix.png",
+          "name": "Wrapped Synthetix"
+      },
+      {
+          "id": "262",
+          "logo": "https://static.okx.com/cdn/explorer/dex/logo/solidly.png",
+          "name": "Solidly V3"
+      },
+      {
+          "id": "265",
+          "logo": "https://static.okx.com/cdn/explorer/dex/logo/SmarDex.png",
+          "name": "SmarDex"
+      },
+      {
+          "id": "323",
+          "logo": "https://static.okx.com/cdn/explorer/dex/logo/Synthetix.png",
+          "name": "sETH Wrapper"
+      },
+      {
+          "id": "476",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/Ekubo.png",
+          "name": "Ekubo ETH"
+      },
+      {
+          "id": "328",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/sDai.png",
+          "name": "sDai"
+      },
+      {
+          "id": "333",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/RingProtocol.png",
+          "name": "Ring Protocol"
+      },
+      {
+          "id": "365",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/Angle.png",
+          "name": "Angle"
+      },
+      {
+          "id": "352",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/Angle.png",
+          "name": "Angle Stake"
+      },
+      {
+          "id": "354",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/Origin.png",
+          "name": "Origin Wrapper"
+      },
+      {
+          "id": "355",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/Origin.png",
+          "name": "Origin"
+      },
+      {
+          "id": "379",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/Unicly.png",
+          "name": "Unicly"
+      },
+      {
+          "id": "380",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_Maverick.png",
+          "name": "Maverick V2"
+      },
+      {
+          "id": "394",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/novabits.png",
+          "name": "Novabits V3"
+      },
+      {
+          "id": "399",
+          "logo": "https://static.okx.com/cdn/wallet/logo/UNI.png",
+          "name": "Uniswap V1"
+      },
+      {
+          "id": "401",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/Fluid.png",
+          "name": "Fluid"
+      },
+      {
+          "id": "404",
+          "logo": "https://static.okx.com/cdn/wallet/logo/dex_PSM.png",
+          "name": "LitePSM"
+      },
+      {
+          "id": "409",
+          "logo": "https://static.okx.com/cdn/wallet/logo/balancer.png",
+          "name": "Balancer CoW AMM"
+      },
+      {
+          "id": "406",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/native.png",
+          "name": "Native"
+      },
+      {
+          "id": "427",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/Saving_USDS.png",
+          "name": "Saving USDS"
+      },
+      {
+          "id": "431",
+          "logo": "https://static.okx.com/cdn/wallet/logo/Curve.png",
+          "name": "Saving CRV Stake Factory"
+      },
+      {
+          "id": "428",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/Saving_GYD.png",
+          "name": "Saving GYD"
+      },
+      {
+          "id": "433",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/EtherFi.png",
+          "name": "EtherFi weETH"
+      },
+      {
+          "id": "437",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/EtherFi.png",
+          "name": "EtherFi eETH"
+      },
+      {
+          "id": "436",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/EtherFi.png",
+          "name": "EtherFi eBTC"
+      },
+      {
+          "id": "438",
+          "logo": "https://static.okx.com/cdn/wallet/logo/UNI.png",
+          "name": "Uniswap V4"
+      },
+      {
+          "id": "450",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/native.png",
+          "name": "NativeV3"
+      },
+      {
+          "id": "466",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/Gamma_Swap.png",
+          "name": "Gamma Swap"
+      },
+      {
+          "id": "482",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/Amber.png",
+          "name": "Amber"
+      },
+      {
+          "id": "522",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/Fluid_Lite.png",
+          "name": "Fluid Lite"
+      },
+      {
+          "id": "523",
+          "logo": "https://static.okx.com/cdn/web3/dex/logo/1010_Trading.png",
+          "name": "1010 Trading"
+      }
+  ],
+  "msg": ""
+}
+
+Wallet API
+DEX API
+Swap API
+API Reference
+Approve Transactions
+Approve Transactions#
+According to the ERC-20 standard
+, we need to make sure that the OKX router has permission to spend funds with the user's wallet before making a transaction. This API will generate the relevant data for calling the contract.
+
+Request URL#
+GET https://web3.okx.com/api/v6/dex/aggregator/approve-transaction
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	Yes	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+tokenContractAddress	String	Yes	Token contract address (e.g., 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48)
+approveAmount	String	Yes	The amount of token that needs to be permitted (set in minimal divisible units, e.g., 1.00 USDT set as 1000000, 1.00 DAI set as 1000000000000000000)
+Response Parameters#
+Parameter	Type	Description
+data	String	Call data
+dexContractAddress	String	The contract address of OKX DEX approver (e.g., 0x6f9ffea7370310cd0f890dfde5e0e061059dcfd9)
+gasLimit	String	Gas limit (e.g., 50000).
+To get accurate data, please take a look at /gas-limit API
+gasPrice	String	Gas price in wei (e.g., 110000000)
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/aggregator/approve-transaction?chainIndex=1&tokenContractAddress=0x6f9ffea7370310cd0f890dfde5e0e061059dcfd9&approveAmount=1000000' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+ "code": "0",
+ "data": [
+   {
+     "data": "0x095ea7b3000000000000000000000000c67879f4065d3b9fe1c09ee990b891aa8e3a4c2f00000000000000000000000000000000000000000000000000000000000f4240",
+     "dexContractAddress": "0xc67879F4065d3B9fe1C09EE990B891Aa8E3a4c2f",
+     "gasLimit": "50000",
+     "gasPrice": "110000000"
+   }
+ ],
+ "msg": ""
+}
+
+Wallet API
+DEX API
+Swap API
+API Reference
+Get Quotes
+Get Quotes#
+Get the best quote for a swap through OKX DEX.
+
+Request URL#
+GET https://web3.okx.com/api/v6/dex/aggregator/quote
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	Yes	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+amount	String	Yes	The input amount of a token to be sold (if swapMode=exactIn) or buy (if swapMode=exactOut), set in minimal divisible units, e.g., 1.00 USDT set as 1000000, 1.00 DAI set as 1000000000000000000, you could get the minimal divisible units from Tokenlist.
+swapMode	String	Yes	Possible values: [exactIn, exactOut].
+Default: exactIn.
+exactOut is for supporting use cases where you need an exact output amount.
+
+Note:
+1.ExactOut feature currently only support Ethereum、Base、BSC 、Arbitrum chain.
+2.ExactOut feature currently support only Uni v3 protocols and DEX API V5 version
+3. In this case the slippage is on the input token.
+fromTokenAddress	String	Yes	The contract address of a token to be sold (e.g., 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)
+toTokenAddress	String	Yes	The contract address of a token to be bought (e.g., 0xa892e1fef8b31acc44ce78e7db0a2dc610f92d00)
+dexIds	String	No	DexId of the liquidity pool for limited quotes, multiple combinations separated by , (e.g.,1,50,180, see liquidity list for more)
+directRoute	Boolean	No	The default setting is false. When enabled, Direct Routes restrict our routing to a single liquidity pool only. Currently, this feature is only active for Solana swaps.
+priceImpactProtectionPercent	String	No	This is an optional feature. The default value is 90 (representing 90%). The priceImpactProtectionPercent parameter can be set between 0 and 100.
+When it’s set to 100, the feature is disabled and every transaction will be allowed to pass.
+If the estimated price impact is above the percentage indicated, an error will be returned. For example, if priceImpactProtectionPercent = 25 (25%), any quote with a price impact higher than 25% will return an error.
+Note: If we’re unable to calculate the price impact, we’ll return null, and the price impact protection will be disabled.
+feePercent	String	No	The percentage of fromTokenAmount will be sent to the referrer's address, the rest will be set as the input amount to be sold.
+min percentage> 0
+max percentage： 10 for Solana, 3 for all other chains.
+By configuring this parameter, you can obtain the final amount of totoken provided to the user after deducting the commission from fromtoken.
+A maximum of nine decimal places is allowed.
+If more decimals are entered, the system will automatically round up.
+Response Parameters#
+Parameter	Type	Description
+chainIndex	String	Unique identifier for the chain.
+swapMode	String	Swap mode of this quote.
+dexRouterList	Array	Quote path data set
+fromTokenAmount	String	The input amount of a token to be sold (e.g., 500000000000000000000000)
+toTokenAmount	String	The resulting amount of a token to be bought (e.g., 168611907733361)
+tradeFee	String	Estimated network fee (USD) of the quote route
+estimateGasFee	String	Estimated gas consumption is returned in the smallest units of each chain, such as wei.
+router	String	Main path for the token swap
+dexProtocol	Object	Liquidity protocols used on the main path (e.g., Verse)
+percent	String	The percentage of assets handled by the protocol (e.g., 100)
+dexName	String	The name of the liquidity protocol
+fromTokenIndex	String	Token index of fromToken in the swap path.
+fromToken	Object	The information of a token to be sold
+tokenContractAddress	String	Token contract address (e.g., 0xa892e1fef8b31acc44ce78e7db0a2dc610f92d00)
+tokenSymbol	String	Token symbol (e.g., 0xa892e1fef8b31acc44ce78e7db0a2dc610f92d00)
+tokenUnitPrice	String	The token unit price returned by this interface is a general USD real time price based on data from on-chain sources. Note: This price is only a recommended price. For some special cases, the token unit price may be 'null'
+decimal	String	The decimal number defines the smallest unit into which a single currency token can be divided. For example, if the decimal number of a token is 8, it means that a single such token can be divided into 100,000,000 of its smallest units. Note: This parameter is for reference only. It may change due to reasons such as settings adjustments by the contract owner.
+isHoneyPot	Boolean	If the token is a honeypot token. yes：true no：false
+taxRate	String	Token tax rate for selling: Applicable to tokens with configurable tax mechanisms (e.g., SafeMoon, SPL2022 tokens). Returns 0 for regular tokens without tax. The value ranges from 0 to 1, where 0.01 represents 1%.
+toTokenIndex	String	Token index of toToken in the swap path.
+toToken	Object	The information of a token to be bought
+tokenContractAddress	String	Token contract address (e.g., 0xa892e1fef8b31acc44ce78e7db0a2dc610f92d00)
+tokenSymbol	String	Token symbol (e.g., 0xa892e1fef8b31acc44ce78e7db0a2dc610f92d00)
+tokenUnitPrice	String	The token unit price returned by this interface is a general USD price based on data from on-chain, exchange, and other third-party sources. Note: This price is only a recommended price. For some special cases, the token unit price may be 'null'
+decimal	String	The decimal number defines the smallest unit into which a single currency token can be divided. For example, if the decimal number of a token is 8, it means that a single such token can be divided into 100,000,000 of its smallest units. Note: This parameter is for reference only. It may change due to reasons such as settings adjustments by the contract owner.
+isHoneyPot	Boolean	If the token is a honeypot token. yes：true no：false
+taxRate	String	Token tax rate for buying: Applicable to tokens with configurable tax mechanisms (e.g., SafeMoon, SPL2022 tokens). Returns 0 for regular tokens without tax. The value ranges from 0 to 1, where 0.01 represents 1%.
+dexName	String	DEX name of the quote route
+dexLogo	String	DEX logo of the quote route
+tradeFee	String	Estimated network fee (USD) of the quote route
+amountOut	String	Received amount of the quote route
+priceImpactPercent	String	Percentage = (Received value – Paid value) / Paid value. The swap amount will affect the depth of the liquidity pool, causing a value difference. This percentage can be positive if the received value exceeds the paid value, e.g., 5 represents 5%.
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/aggregator/quote?amount=10000000000000000000&chainIndex=1&toTokenAddress=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48&fromTokenAddress=0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+    "code": "0",
+    "data": [
+        {
+            "chainIndex": "130",
+            "contextSlot": 0,
+            "dexRouterList": [
+                {
+                    "dexProtocol": {
+                        "dexName": "Uniswap V4",
+                        "percent": "30"
+                    },
+                    "fromToken": {
+                        "decimal": "18",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x4200000000000000000000000000000000000006",
+                        "tokenSymbol": "WETH",
+                        "tokenUnitPrice": "4191.043356462183138854"
+                    },
+                    "fromTokenIndex": "0",
+                    "toToken": {
+                        "decimal": "6",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x078d782b760474a361dda0af3839290b0ef57ad6",
+                        "tokenSymbol": "USDC",
+                        "tokenUnitPrice": "0.999692348812448693"
+                    },
+                    "toTokenIndex": "4"
+                },
+                {
+                    "dexProtocol": {
+                        "dexName": "Uniswap V4",
+                        "percent": "5"
+                    },
+                    "fromToken": {
+                        "decimal": "18",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x4200000000000000000000000000000000000006",
+                        "tokenSymbol": "WETH",
+                        "tokenUnitPrice": "4191.043356462183138854"
+                    },
+                    "fromTokenIndex": "0",
+                    "toToken": {
+                        "decimal": "6",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x9151434b16b9763660705744891fa906f660ecc5",
+                        "tokenSymbol": "USDT",
+                        "tokenUnitPrice": "1.000313193103130296"
+                    },
+                    "toTokenIndex": "3"
+                },
+                {
+                    "dexProtocol": {
+                        "dexName": "Uniswap V4",
+                        "percent": "5"
+                    },
+                    "fromToken": {
+                        "decimal": "18",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x4200000000000000000000000000000000000006",
+                        "tokenSymbol": "WETH",
+                        "tokenUnitPrice": "4191.043356462183138854"
+                    },
+                    "fromTokenIndex": "0",
+                    "toToken": {
+                        "decimal": "8",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x0555e30da8f98308edb960aa94c0db47230d2b9c",
+                        "tokenSymbol": "WBTC",
+                        "tokenUnitPrice": "112879.983830393508167243"
+                    },
+                    "toTokenIndex": "2"
+                },
+                {
+                    "dexProtocol": {
+                        "dexName": "Uniswap V4",
+                        "percent": "5"
+                    },
+                    "fromToken": {
+                        "decimal": "18",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x4200000000000000000000000000000000000006",
+                        "tokenSymbol": "WETH",
+                        "tokenUnitPrice": "4191.043356462183138854"
+                    },
+                    "fromTokenIndex": "0",
+                    "toToken": {
+                        "decimal": "8",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x927b51f251480a681271180da4de28d44ec4afb8",
+                        "tokenSymbol": "WBTC",
+                        "tokenUnitPrice": "112634.107075070841530997"
+                    },
+                    "toTokenIndex": "1"
+                },
+                {
+                    "dexProtocol": {
+                        "dexName": "Uniswap V4",
+                        "percent": "55"
+                    },
+                    "fromToken": {
+                        "decimal": "18",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x4200000000000000000000000000000000000006",
+                        "tokenSymbol": "WETH",
+                        "tokenUnitPrice": "4191.043356462183138854"
+                    },
+                    "fromTokenIndex": "0",
+                    "toToken": {
+                        "decimal": "8",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x927b51f251480a681271180da4de28d44ec4afb8",
+                        "tokenSymbol": "WBTC",
+                        "tokenUnitPrice": "112634.107075070841530997"
+                    },
+                    "toTokenIndex": "1"
+                },
+                {
+                    "dexProtocol": {
+                        "dexName": "Uniswap V4",
+                        "percent": "3"
+                    },
+                    "fromToken": {
+                        "decimal": "8",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x927b51f251480a681271180da4de28d44ec4afb8",
+                        "tokenSymbol": "WBTC",
+                        "tokenUnitPrice": "112634.107075070841530997"
+                    },
+                    "fromTokenIndex": "1",
+                    "toToken": {
+                        "decimal": "6",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x9151434b16b9763660705744891fa906f660ecc5",
+                        "tokenSymbol": "USDT",
+                        "tokenUnitPrice": "1.000313193103130296"
+                    },
+                    "toTokenIndex": "3"
+                },
+                {
+                    "dexProtocol": {
+                        "dexName": "Uniswap V4",
+                        "percent": "97"
+                    },
+                    "fromToken": {
+                        "decimal": "8",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x927b51f251480a681271180da4de28d44ec4afb8",
+                        "tokenSymbol": "WBTC",
+                        "tokenUnitPrice": "112634.107075070841530997"
+                    },
+                    "fromTokenIndex": "1",
+                    "toToken": {
+                        "decimal": "8",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x0555e30da8f98308edb960aa94c0db47230d2b9c",
+                        "tokenSymbol": "WBTC",
+                        "tokenUnitPrice": "112879.983830393508167243"
+                    },
+                    "toTokenIndex": "2"
+                },
+                {
+                    "dexProtocol": {
+                        "dexName": "Uniswap V4",
+                        "percent": "48"
+                    },
+                    "fromToken": {
+                        "decimal": "8",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x0555e30da8f98308edb960aa94c0db47230d2b9c",
+                        "tokenSymbol": "WBTC",
+                        "tokenUnitPrice": "112879.983830393508167243"
+                    },
+                    "fromTokenIndex": "2",
+                    "toToken": {
+                        "decimal": "6",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x078d782b760474a361dda0af3839290b0ef57ad6",
+                        "tokenSymbol": "USDC",
+                        "tokenUnitPrice": "0.999692348812448693"
+                    },
+                    "toTokenIndex": "4"
+                },
+                {
+                    "dexProtocol": {
+                        "dexName": "Uniswap V4",
+                        "percent": "52"
+                    },
+                    "fromToken": {
+                        "decimal": "8",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x0555e30da8f98308edb960aa94c0db47230d2b9c",
+                        "tokenSymbol": "WBTC",
+                        "tokenUnitPrice": "112879.983830393508167243"
+                    },
+                    "fromTokenIndex": "2",
+                    "toToken": {
+                        "decimal": "6",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x9151434b16b9763660705744891fa906f660ecc5",
+                        "tokenSymbol": "USDT",
+                        "tokenUnitPrice": "1.000313193103130296"
+                    },
+                    "toTokenIndex": "3"
+                },
+                {
+                    "dexProtocol": {
+                        "dexName": "Euler",
+                        "percent": "73"
+                    },
+                    "fromToken": {
+                        "decimal": "6",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x9151434b16b9763660705744891fa906f660ecc5",
+                        "tokenSymbol": "USDT",
+                        "tokenUnitPrice": "1.000313193103130296"
+                    },
+                    "fromTokenIndex": "3",
+                    "toToken": {
+                        "decimal": "6",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x078d782b760474a361dda0af3839290b0ef57ad6",
+                        "tokenSymbol": "USDC",
+                        "tokenUnitPrice": "0.999692348812448693"
+                    },
+                    "toTokenIndex": "4"
+                },
+                {
+                    "dexProtocol": {
+                        "dexName": "Euler",
+                        "percent": "26"
+                    },
+                    "fromToken": {
+                        "decimal": "6",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x9151434b16b9763660705744891fa906f660ecc5",
+                        "tokenSymbol": "USDT",
+                        "tokenUnitPrice": "1.000313193103130296"
+                    },
+                    "fromTokenIndex": "3",
+                    "toToken": {
+                        "decimal": "6",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x078d782b760474a361dda0af3839290b0ef57ad6",
+                        "tokenSymbol": "USDC",
+                        "tokenUnitPrice": "0.999692348812448693"
+                    },
+                    "toTokenIndex": "4"
+                },
+                {
+                    "dexProtocol": {
+                        "dexName": "Uniswap V4",
+                        "percent": "1"
+                    },
+                    "fromToken": {
+                        "decimal": "6",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x9151434b16b9763660705744891fa906f660ecc5",
+                        "tokenSymbol": "USDT",
+                        "tokenUnitPrice": "1.000313193103130296"
+                    },
+                    "fromTokenIndex": "3",
+                    "toToken": {
+                        "decimal": "6",
+                        "isHoneyPot": false,
+                        "taxRate": "0",
+                        "tokenContractAddress": "0x078d782b760474a361dda0af3839290b0ef57ad6",
+                        "tokenSymbol": "USDC",
+                        "tokenUnitPrice": "0.999692348812448693"
+                    },
+                    "toTokenIndex": "4"
+                }
+            ],
+            "estimateGasFee": "1002000",
+            "fromToken": {
+                "decimal": "18",
+                "isHoneyPot": false,
+                "taxRate": "0",
+                "tokenContractAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "tokenSymbol": "UNICHAIN_ETH",
+                "tokenUnitPrice": "4191.043356462183138854"
+            },
+            "fromTokenAmount": "10000000000000000000000",
+            "priceImpactPercent": "-67.53",
+            "router": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee--0x927b51f251480a681271180da4de28d44ec4afb8--0x0555e30da8f98308edb960aa94c0db47230d2b9c--0x9151434b16b9763660705744891fa906f660ecc5--0x078d782b760474a361dda0af3839290b0ef57ad6",
+            "swapMode": "exactIn",
+            "toToken": {
+                "decimal": "6",
+                "isHoneyPot": false,
+                "taxRate": "0",
+                "tokenContractAddress": "0x078d782b760474a361dda0af3839290b0ef57ad6",
+                "tokenSymbol": "USDC",
+                "tokenUnitPrice": "0.999692348812448693"
+            },
+            "toTokenAmount": "13614286937853",
+            "tradeFee": "0.00001607688116316"
+        }
+    ],
+    "msg": ""
+}
+
+Wallet API
+DEX API
+Swap API
+API Reference
+Swap
+Swap#
+Generate the data to call the OKX DEX router to execute a swap.
+
+Note
+In Uni v3 pools, the following scenario may occur:
+If the liquidity for the desired token pair in the pool is depleted, the pool will only consume part of the payment token, leaving a remainder.
+As a fully decentralized smart contract, the OKX DEX Router will automatically refund the remainder.
+During your integration, please ensure compatibility with this scenario by configuring your contract to support token refunds, thereby ensuring a smooth user experience.
+Request URL#
+GET https://web3.okx.com/api/v6/dex/aggregator/swap
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	No	Unique identifier for the chain.
+amount	String	Yes	The input amount of a token to be sold
+(set in minimal divisible units, e.g., 1.00 USDT set as 1000000, 1.00 DAI set as 1000000000000000000), you could get the minimal divisible units from Tokenlist.
+swapMode	String	Yes	Possible values: [exactIn, exactOut].
+Default: exactIn.
+exactOut is for supporting use cases where you need an exact output amount.
+
+Note:
+1.ExactOut feature currently only support Ethereum、Base、BSC 、Arbitrum chain.
+2.ExactOut feature currently support only Uni v3 protocols and DEX API V5 version
+3.In this case the slippage is on the input token.
+4.ExactOut feature currently support only v5 DEX API
+fromTokenAddress	String	Yes	The contract address of a token you want to send (e.g.,0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)
+toTokenAddress	String	Yes	The contract address of a token you want to receive (e.g.,0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48)
+slippagePercent	String	Yes	Slippage limit.
+
+Note:
+1. For EVM networks, the slippage setting has a minimum value of 0 and a maximum value of 100.
+2. For Solana, the slippage setting has a minimum value of 0 and a maximum value of less than 100.
+(For example: 0.5 means that the maximum slippage for this transaction is 0.5%.)
+userWalletAddress	String	Yes	User's wallet address (e.g.,0x3f6a3f57569358a512ccc0e513f171516b0fd42a)
+swapReceiverAddress	String	No	Recipient address of a purchased token if not set, userWalletAddress will receive a purchased token (e.g.,0x3f6a3f57569358a512ccc0e513f171516b0fd42a)
+feePercent	String	No	The percentage of fromTokenAmount will be sent to the referrer's address, the rest will be set as the input amount to be sold.
+min percentage> 0
+max percentage： 10 for Solana, 3 for all other chains.
+By configuring this parameter, you can obtain the final amount of totoken provided to the user after deducting the commission from fromtoken.
+A maximum of nine decimal places is allowed.
+If more decimals are entered, the system will automatically round up.
+fromTokenReferrerWalletAddress	String	No	The wallet address that receives the commission fee for the fromToken.
+When using the API, you must set the commission rate together with feePercent, and for each transaction, you can only choose either fromToken commission or toToken commission.
+
+Note:
+1. For Solana: The referrer wallet must have some SOL deposited in advance to activate the address.
+2. For TON: Only commission through liquidity pools of Stonfi V2 and Dedust is supported; commission through Stonfi V1 liquidity pools is not supported.
+3.For BSC Chain: Commission split for swaps via Four.meme is not supported
+toTokenReferrerWalletAddress	String	No	The wallet address that receives the commission fee for the toToken.
+When using the API, you must set the commission rate together with feePercent, and for each transaction, you can only choose either fromToken commission or toToken commission.
+
+Note:
+1. For Solana: The referrer wallet must have some SOL deposited in advance to activate the address.
+2. For TON: Only commission through liquidity pools of Stonfi V2 is supported.
+3.For BSC Chain: Commission split for swaps via Four.meme is not supported
+positiveSlippagePercent	String	No	This feature is open to whitelist or enterprise clients only. If you want to access it , please contact dexapi@okx.com
+
+Once configured, a fee can be charged on the quote improvement portion, capped at 10% of the total trade amount.
+
+The cap can be adjusted by specifying a custom percentage parameter.The default setting is 0. Min percentage: 0 ,Max percentage: 10 , Maximum of 1 decimal point.
+Currently, this parameter is only supported on the Solana chain.
+positiveSlippageFeeAddress	String	No	This feature is open to whitelist or enterprise clients only. If you want to use it , please contact dexapi@okx.com
+
+The wallet address that receives positive slippage. You must set positiveSlippagePercent parameter together to specify the proportion. If provided, all positive slippage earnings will be sent to this address; if not provided, the wallet address used for collecting referral fees will be used instead.
+gasLimit	String	No	The gas(In smallest units : wei) for the swap transaction. If the value is too low to achieve the quote, an error will be returned.
+Only applicable to EVM
+gasLevel	String	No	( defaults to average) The target gas price level for the swap transaction,set to average or fast or slow
+computeUnitPrice	String	No	Used for transactions on the Solana network and similar to gasPrice on Ethereum. This price determines the priority level of the transaction. The higher the price, the more likely that the transaction can be processed faster.
+computeUnitLimit	String	No	Used for transactions on the Solana network and analogous to gasLimit on Ethereum, which ensures that the transaction won’t take too much computing resource.
+If the parameter tips is not 0, then computeUnitPrice should be set to 0. Otherwise, the fee is wasted.
+tips	String	No	Jito tips in SOL. The maximum is "2" and the minimum is "0.0000000001".
+This is used for MEV protection. Specify tips to obtain calldata and call the broadcast transaction API。
+dexIds	String	No	DexId of the liquidity pool for limited quotes, multiple combinations separated by , (e.g., 1,50,180, see liquidity list for more)
+excludeDexIds	String	No	The dexId of the liquidity pool will not be used, multiple combinations separated by , (e.g.,1,50,180, see liquidity list for more)
+disableRFQ	Boolean	No	Disable all liqudity source classified as RFQs that have dependencies on time-sensitive quotes. The default setting is false.
+directRoute	Boolean	No	The default setting is false. When enabled, Direct Routes restrict our routing to a single liquidity pool only. Currently, this feature is only active for Solana swaps.
+priceImpactProtectionPercent	String	No	( The default is 90%.) The percentage (between 0 - 100) of the price impact allowed.
+
+When the priceImpactProtectionPercent is set, if the estimated price impact is above the percentage indicated, an error will be returned. For example, if priceImpactProtectionPercent = 25, any quote with a price impact higher than 25% will return an error.
+When it’s set to 100, the feature will be disabled, which means that every transaction will be allowed to pass.
+Note: If we’re unable to calculate the price impact, we’ll return null, and the price impact protection will be disabled.
+callDataMemo	String	No	You can customize the parameters to be sent on the blockchain in callData by encoding the data into a 128-character 64-bytes hexadecimal string. For example, the string “0x...111” needs to keep the “0x” at its start.
+autoSlippage	Boolean	No	Default is false. When set to true, the original slippage (if set) will be covered by the autoSlippage and the API will calculate and return auto slippage recommendations based on current market data.
+maxAutoSlippagePercent	String	No	When autoSlippage is set to true, this value is the maximum auto slippage returned by the API(e.g., 0.5 represents 0.5%). We recommend that users adopt this value to ensure risk control.
+Response Parameters#
+Parameter	Type	Description
+routerResult	Object	Quote path data
+chainIndex	String	Unique identifier for the chain.
+swapMode	String	Swap mode of this quote.
+fromTokenAmount	String	The input amount of a token to be sold ( e.g.,500000000000000000000000)
+toTokenAmount	String	The resulting amount of a token to be bought ( e.g.,168611907733361)
+tradeFee	String	Estimated network fee (USD) of the quote route
+estimateGasFee	String	Estimated gas consumption is returned in the smallest units of each chain, such as wei.
+dexRouterList	Array	Quote path data set
+router	String	Main path for the token swap
+dexProtocol	Object	Liquidity protocols used on the main path
+dexName	String	The name of the liquidity protocol (e.g.,Verse)
+percent	String	The percentage of assets handled by the protocol (e.g.,100)
+fromTokeIndexn	String	Token Index represents the position of from token during routing.
+fromToken	Object	The information of a token to be sold
+tokenContractAddress	String	Token contract address (e.g.,0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48)
+tokenSymbol	String	Token symbol (e.g.,USDC)
+tokenUnitPrice	String	The token unit price returned by this interface is a general USDis a general USD real time price based on data from on-chain sources. Note: This price is only a recommended price. For some special cases, the token unit price may be 'null'
+decimal	String	The decimal number defines the smallest unit into which a single currency token can be divided. For example, if the decimal number of a token is 8, it means that a single such token can be divided into 100,000,000 of its smallest units. Note: This parameter is for reference only. It may change due to reasons such as settings adjustments by the contract owner.
+isHoneyPot	Boolean	If the token is a honeypot token. yes：true no：false
+taxRate	String	Token tax rate for selling: Applicable to tokens with configurable tax mechanisms (e.g., SafeMoon, SPL2022 tokens). Returns 0 for regular tokens without tax. The value ranges from 0 to 1, where 0.01 represents 1%.
+toTokenIndex	String	Token Index represents the position of to token during routing.
+toToken	Object	The information of a token to be bought
+tokenContractAddress	String	Token contract address (e.g.,0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48)
+tokenSymbol	String	Token symbol (e.g.,USDC)
+tokenUnitPrice	String	The token unit price returned by this interface is a general USD price based on data from on-chain, exchange, and other third-party sources. Note: This price is only a recommended price. For some special cases, the token unit price may be 'null'
+decimal	String	The decimal number defines the smallest unit into which a single currency token can be divided. For example, if the decimal number of a token is 8, it means that a single such token can be divided into 100,000,000 of its smallest units. Note: This parameter is for reference only. It may change due to reasons such as settings adjustments by the contract owner.
+isHoneyPot	Boolean	If the token is a honeypot token. yes：true no：false
+taxRate	String	Token tax rate for buying: Applicable to tokens with configurable tax mechanisms (e.g., SafeMoon, SPL2022 tokens). Returns 0 for regular tokens without tax. The value ranges from 0 to 1, where 0.01 represents 1%.
+priceImpactPercent	String	Percentage = (Received value – Paid value) / Paid value. The swap amount will affect the depth of the liquidity pool, causing a value difference. This percentage can be positive if the received value exceeds the paid value.
+tx	Object	contract data model
+signatureData	Array	If this parameter is returned, it indicates that the transaction requires additional signing data. Developers should use this parameter as one of the inputs for the transaction signature and ensure it is correctly applied during the signing process.
+When you specify the tips request parameter, this parameter value represents the calldata of the jito tips transfer. Use it to broadcast transactions, refer to this API
+from	String	User's wallet address (e.g.,0x3f6a3f57569358a512ccc0e513f171516b0fd42a)
+gas	String	estimated amount of the gas limit, increase this value by 50% (e.g.,1173250).
+To get accurate data, please take a look at /gas-limit API
+gasPrice	String	Gas price in wei (e.g.,58270000000)
+maxPriorityFeePerGas	String	EIP-1559: Recommended priority cost of gas per unit (e.g.,500000000)
+to	String	The contract address of OKX DEX router (e.g.,0x3b3ae790Df4F312e745D270119c6052904FB6790)
+value	String	The amount of native tokens (in wei) that will be sent to the contract address (e.g.,0)
+maxSpendAmount	String	The maximum amount of a token to spend when the price reaches the upper limit of slippage (applies to the exactOut mode)
+minReceiveAmount	String	The minimum amount of a token to buy when the price reaches the upper limit of slippage (e.g.,900645839798)
+data	String	Call data
+slippagePercent	String	The value of current transaction slippage
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/aggregator/swap?chainIndex=1&amount=10000000000000&toTokenAddress=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48&fromTokenAddress=0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee&slippage=0.5&userWalletAddress=0x6f9ffea7370310cd0f890dfde5e0e061059dcfb8' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+    "code": "0",
+    "data": [
+        {
+            "routerResult": {
+                "chainIndex": "56",
+                "contextSlot": 0,
+                "dexRouterList": [
+                    {
+                        "dexProtocol": {
+                            "dexName": "Uniswap V3",
+                            "percent": "100"
+                        },
+                        "fromToken": {
+                            "decimal": "18",
+                            "isHoneyPot": false,
+                            "taxRate": "0",
+                            "tokenContractAddress": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+                            "tokenSymbol": "WBNB",
+                            "tokenUnitPrice": "1003.912819259131997365"
+                        },
+                        "fromTokenIndex": "0",
+                        "toToken": {
+                            "decimal": "18",
+                            "isHoneyPot": false,
+                            "taxRate": "0",
+                            "tokenContractAddress": "0x55d398326f99059ff775485246999027b3197955",
+                            "tokenSymbol": "USDT",
+                            "tokenUnitPrice": "1.001434208940503979"
+                        },
+                        "toTokenIndex": "1"
+                    }
+                ],
+                "estimateGasFee": "135000",
+                "fromToken": {
+                    "decimal": "18",
+                    "isHoneyPot": false,
+                    "taxRate": "0",
+                    "tokenContractAddress": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+                    "tokenSymbol": "WBNB",
+                    "tokenUnitPrice": "1003.912819259131997365"
+                },
+                "fromTokenAmount": "100000000000",
+                "priceImpactPercent": "0.1",
+                "router": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c--0x55d398326f99059ff775485246999027b3197955",
+                "swapMode": "exactIn",
+                "toToken": {
+                    "decimal": "18",
+                    "isHoneyPot": false,
+                    "taxRate": "0",
+                    "tokenContractAddress": "0x55d398326f99059ff775485246999027b3197955",
+                    "tokenSymbol": "USDT",
+                    "tokenUnitPrice": "1.001434208940503979"
+                },
+                "toTokenAmount": "100347964355860",
+                "tradeFee": "0.014928705"
+            },
+            "tx": {
+                "data": "0x0d5f0e3b000000000000000000032e64fefef0f2ecf7b2f0aef87bdbf0eb93a26fffe7aa000000000000000000000000000000000000000000000000000000174876e80000000000000000000000000000000000000000000000000000005a5a70b8bf6d000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000018000000000000000000000006fe9e9de56356f7edbfcbb29fab7cd69471a4869",
+                "from": "0xfefef0f2ecf7b2f0aef87bdbf0eb93a26fffe7aa",
+                "gas": "202500",
+                "gasPrice": "110000000",
+                "maxPriorityFeePerGas": "110000000",
+                "maxSpendAmount": "100000000000",
+                "minReceiveAmount": "99344484712301",
+                "signatureData": [
+                    ""
+                ],
+                "slippagePercent": "0.5",
+                "to": "0xF4858d71e5d7D27e3F7270390Cd57545DcA35aa9",
+                "value": "0"
+            }
+        }
+    ],
+    "msg": ""
+}
+
+Wallet API
+DEX API
+Swap API
+API Reference
+Get Transaction Status
+Get Transaction Status#
+Get the final transaction status of a single-chain swap using txhash.
+
+Request URL#
+GET https://web3.okx.com/api/v6/dex/aggregator/history
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	Yes	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+txHash	String	Yes	Transaction hash for a swap initiated via OKX DEX API
+isFromMyProject	Boolean	No	Set true to check if the transaction is under the current API Key. Set false or omit to query any OKX DEX API transaction.
+Response Parameters#
+Parameter	Type	Description
+chainIndex	String	Unique identifier for the chain.
+txHash	String	Transaction hash.
+height	String	Block height where the transaction occurred.
+txTime	String	Transaction time in Unix timestamp (milliseconds).
+status	String	Transaction status: pending (In Progress), success (Success), fail (Failure).
+txType	String	Transaction action: Approve, Wrap, Unwrap, Swap.
+fromAddress	String	Sender's address.
+dexRouter	String	Interaction address.
+toAddress	String	Receiver's address.
+fromTokenDetails	Array	Details of the token being swapped.
+>symbol	String	Symbol of the token being swapped.
+>amount	String	Swap amount in the smallest unit (e.g., wei for Ethereum).
+>tokenAddress	String	Contract address of the token being swapped (e.g., 0xEeeeeEeeeEeEee...).
+toTokenDetails	Array	Details of the token received in the swap.
+>symbol	String	Symbol of the token received.
+>amount	String	Amount received in the smallest unit.
+>tokenAddress	String	Contract address of the received token (e.g., 0xa0b86991c6218b36...).
+referalAmount	String	Referral fee amount.
+errorMsg	String	Error message.
+gasLimit	String	Gas limit for the transaction.
+gasUsed	String	Gas used in the transaction, in the smallest unit (e.g., wei).
+gasPrice	String	Gas price in the smallest unit (e.g., wei).
+txFee	String	Transaction fee, response in the native token amount.Applied in Solana and Sui chain
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/aggregator/history?chainIndex=784&txHash=5GePcvqEakoUtArW8PHULDSQds95vcgeiTznvbnb8hCV' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+    "code": "0",
+    "data": {
+        "chainIndex": "784",
+        "dexRouter": "0x51159f25f262ae01e87532b673de3b38df8f0ecc2dc0581f1033df6b84b84955",
+        "errorMsg": "",
+        "fromAddress": "0x4b9df646075d8621e2578f14818427e4c708709744ea3b827136056f85f88da7",
+        "fromTokenDetails": {
+            "amount": "892919000000.000",
+            "symbol": "HIPPO",
+            "tokenAddress": "0x8993129d72e733985f7f1a00396cbd055bad6f817fee36576ce483c8bbb8b87b::sudeng::SUDENG"
+        },
+        "gasLimit": "",
+        "gasPrice": "",
+        "gasUsed": "",
+        "height": "99502953",
+        "referralAmount": "892919000",
+        "status": "success",
+        "toAddress": "0x4b9df646075d8621e2578f14818427e4c708709744ea3b827136056f85f88da7",
+        "toTokenDetails": {
+            "amount": "1532443840.00000000",
+            "symbol": "SUI",
+            "tokenAddress": "0x2::sui::SUI"
+        },
+        "txFee": "7976416",
+        "txHash": "5GePcvqEakoUtArW8PHULDSQds95vcgeiTznvbnb8hCV",
+        "txTime": "1736390263909",
+        "txType": "swap"
+    },
+    "msg": ""
+}
+
+Wallet API
+Market API
+Market Price API
+API Reference
+Get supported chains
+Get supported chains#
+Retrieve information on chains supported by Market API.
+
+Request URL#
+GET https://web3.okx.com/api/v6/dex/market/supported/chain
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	No	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+Response Parameters#
+Parameter	Type	Description
+chainIndex	String	Unique identifier for the chain
+chainName	String	Chain name (e.g.,Optimism)
+chainLogoUrl	String	Chain icon
+chainSymbol	String	Chain symbol (e.g., ETH).
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/market/supported/chain?chainIndex=1' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+    "code":"0",
+    "data":[
+          {
+            "chainIndex":"1",
+            "chainName":"Ethereum",
+            "chainSymbol":"ETH"
+          },
+    ],
+    "msg":""
+  }
+
+
+Wallet API
+Market API
+Market Price API
+API Reference
+Get Price
+Get Price#
+Retrieve the latest price of a token.
+
+Request URL#
+POST https://web3.okx.com/api/v6/dex/market/price
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	Yes	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+tokenContractAddress	String	Yes	Token contract address,for EVM please pass all-lowercase addresses (e.g., 0x382bb369d343125bfb2117af9c149795c6c65c50)
+Response Parameters#
+Parameter	Type	Description
+chainIndex	String	Unique identifier for the chain
+tokenContractAddress	String	Token contract address
+time	String	Timestamp of the price, Unix timestamp format in milliseconds
+price	String	Latest token price
+Request Example#
+shell
+curl --location --request POST 'https://web3.okx.com/api/v6/dex/market/price' \
+--header 'Content-Type: application/json' \
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z' \
+--data-raw '[
+      {
+          "chainIndex": "66",
+          "tokenContractAddress":"0x382bb369d343125bfb2117af9c149795c6c65c50"
+      }
+  ]'
+Response Example#
+200
+{
+    "code":"0",
+    "data":[
+    {
+    "chainIndex": "1",
+    "tokenContractAddress": "0x382bb369d343125bfb2117af9c149795c6c65c50",
+    "time": "1716892020000",
+    "price": "26.458143090226812"
+    }
+    ],
+    "msg":""
+}
+
+Wallet API
+Market API
+Market Price API
+API Reference
+Get Trades
+Get Trades#
+Retrieve the recent transactions of a token.
+
+Request URL#
+GET https://web3.okx.com/api/v6/dex/market/trades
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	Yes	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+tokenContractAddress	String	Yes	Token contract address,for EVM please pass all-lowercase addresses (e.g., 0x382bb369d343125bfb2117af9c149795c6c65c50)
+after	String	No	Pagination of data to return records earlier than the requested id.
+limit	String	No	Number of results per request. The maximum is 500 and default is 100.
+Response Parameters#
+Parameter	Type	Description
+id	String	Unique trade id
+chainIndex	String	Unique identifier for the chain. (e.g., 1 for Ethereum. See ChainIndex)
+tokenContractAddress	String	Token contract address
+txHashUrl	String	On-chain txhash of the transactions
+userAddress	String	Authorizer of the transaction
+dexName	String	Name of the dex where the trade occured
+poolLogoUrl	String	Pool logo url
+type	String	trade Type. buy sell
+changedTokenInfo	String	exchanged info
+> amount	String	token exchanged amount in this trade
+> tokenSymbol	String	Token symbol
+> tokenContractAddress	String	Token contract address
+price	String	Latest token price
+volume	String	USD value of this trade
+time	String	Timestamp of the price, Unix timestamp format in milliseconds
+isFiltered	String	If the trade is filtered for price and k-line calculation.
+0: not filtered 1: filtered"
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/market/trades?chainIndex=501&tokenContractAddress=HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+  "code":"0",
+  "data":[
+    {
+    "id":"1739439633000!@#120!@#14731892839",
+    "chainIndex": "501",
+    "tokenContractAddress": "HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC",
+    "txHashUrl": "https://solscan.io/tx/zgDzoiVG4XuDgQcoEg9vhpRyfyk5thNUQuTeTCeF289Qec5iraeCrUzPLyiE2UCviox2ebbTcsagGvzYF7M5uqs",
+    "userAddress": "2kCm1RHGJjeCKL4SA3ZJCLyXqUD7nEJ7GMtVaP7c6jQ8",
+    "dexName": "Orca Whirlpools",
+    "poolLogoUrl": "https://static.okx.com/cdn/wallet/logo/dex_orcaswap.png",
+    "type": "sell",
+    "changedTokenInfo": [
+    {
+    "amount":"100.396595878", 
+    "tokenSymbol":"ai16z",
+    "tokenContractAddress": "HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC"
+    },
+    {
+    "amount":"2.482831", 
+    "tokenSymbol":"SOL",
+    "tokenContractAddress": "So11111111111111111111111111111111111111112"
+    }
+    ]
+    "price": "26.458143090226812",
+    "volume": "519.788163",
+    "time": "1739439633000",
+    "isFiltered": "0"
+    }
+    ],
+  "msg":"",
+}
+
+Wallet API
+Market API
+Market Price API
+API Reference
+Get Candlesticks
+Get Candlesticks#
+Retrieve the candlestick charts. This endpoint can retrieve the latest 1,440 data entries. Charts are returned in groups based on the requested bar.
+
+Request URL#
+GET https://web3.okx.com/api/v6/dex/market/candles
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	Yes	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+tokenContractAddress	String	Yes	Token contract address,for EVM please pass all-lowercase addresses (e.g., 0x382bb369d343125bfb2117af9c149795c6c65c50)
+after	String	No	Pagination of data to return records earlier than the requested ts.
+before	String	No	Pagination of data to return records newer than the requested ts. The latest data will be returned when using before individually
+bar	String	No	Bar size, the default is 1m
+e.g. [1s/1m/3m/5m/15m/30m/1H/2H/4H]
+Hong Kong time opening price k-line：[6H/12H/1D/1W/1M/3M]
+UTC time opening price k-line：[/6Hutc/12Hutc/1Dutc/1Wutc/1Mutc/3Mutc]
+limit	String	No	Number of results per request. The maximum is 299. The default is 100.
+Response Parameters#
+Parameter	Type	Description
+ts	String	Opening time of the candlestick, Unix timestamp format in milliseconds, e.g. 1597026383085
+o	String	Open price
+h	String	Highest price
+l	String	Lowest price
+c	String	Close price
+vol	String	Trading volume, with a unit of base currency.
+volUsd	String	Trading volume, with a unit of usd.
+confirm	String	The state of candlesticks.
+0 represents that it is uncompleted, 1 represents that it is completed.
+Explanation
+The first candlestick data may be incomplete, and should not be polled repeatedly. The data returned will be arranged in an array like this: [ts,o,h,l,c,vol,volUsd,confirm]. Use the closing price of the last candle as the opening price of the following candle.
+
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/market/candles?chainIndex=66&tokenContractAddress=0x382bb369d343125bfb2117af9c149795c6c65c50' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+  "code": "0",
+  "data": [
+    [
+      "1597026383085",
+      "3.721",
+      "3.743",
+      "3.677",
+      "3.708",
+      "22698348.04828491",
+      "226348.0482",
+      "0"
+    ],
+    [
+      "1597026383085",
+      "3.731",
+      "3.799",
+      "3.494",
+      "3.72",
+      "67632347.24399722",
+      "6767.2439",
+      "1"
+    ]
+  ],
+  "msg": ""
+}
+
+Wallet API
+Market API
+Market Price API
+API Reference
+Get Candlesticks History
+Get Candlesticks History#
+Retrieve historical candlestick charts.
+
+Note
+Historical candlestick data does not include unfinished candlesticks
+Request URL#
+GET https://web3.okx.com/api/v6/dex/market/historical-candles
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	Yes	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+tokenContractAddress	String	Yes	Token contract address ,for EVM please pass all-lowercase addresses(e.g., 0x382bb369d343125bfb2117af9c149795c6c65c50)
+after	String	No	Pagination of data to return records earlier than the requested ts.
+before	String	No	Pagination of data to return records newer than the requested ts. The latest data will be returned when using before individually
+bar	String	No	Bar size, the default is 1m
+e.g. [1s/1m/3m/5m/15m/30m/1H/2H/4H]
+Hong Kong time opening price k-line：[6H/12H/1D/1W/1M/3M]
+UTC time opening price k-line：[/6Hutc/12Hutc/1Dutc/1Wutc/1Mutc/3Mutc]
+limit	String	No	Number of results per request. The maximum is 299. The default is 100.
+Response Parameters#
+Parameter	Type	Description
+ts	String	Opening time of the candlestick, Unix timestamp format in milliseconds, e.g. 1597026383085
+o	String	Open price
+h	String	Highest price
+l	String	Lowest price
+c	String	Close price
+vol	String	Trading volume, with a unit of base currency.
+volUsd	String	Trading volume, with a unit of usd.
+confirm	String	The state of candlesticks.
+0 represents that it is uncompleted, 1 represents that it is completed.
+Explanation
+The first candlestick data may be incomplete, and should not be polled repeatedly. The data returned will be arranged in an array like this: [ts,o,h,l,c,vol,volUsd,confirm]. Use the closing price of the last candle as the opening price of the following candle.
+
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/market/historical-candles?chainIndex=66&tokenContractAddress=0x382bb369d343125bfb2117af9c149795c6c65c50' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+    "code":"0",
+    "data":[
+     [
+        "1597026383085",
+        "3.721",
+        "3.743",
+        "3.677",
+        "3.708",
+        "22698348.04828491",
+        "226348.0482",
+        "0"
+    ],
+    [
+        "1597026383085",
+        "3.731",
+        "3.799",
+        "3.494",
+        "3.72",
+        "67632347.24399722",
+        "6767.2439",
+        "1"
+    ]
+    ],
+    "msg":""
+}
+
+Wallet API
+Market API
+Market Price API
+Error Codes
+Error Codes#
+Code	HTTP status	Message
+0	200	Succeeded
+50011	429	Rate limit reached. Please refer to API documentation and throttle requests accordingly
+50014	400	Parameter {param0} cannot be empty
+50026	500	System error. Try again later
+50103	401	Request header "OK-ACCESS-KEY" cannot be empty
+50104	401	Request header "OK-ACCESS-PASSPHRASE" cannot be empty
+50105	401	Request header "OK-ACCESS-PASSPHRASE" incorrect
+50106	401	Request header "OK-ACCESS-SIGN" cannot be empty
+50107	401	Request header "OK-ACCESS-TIMESTAMP" cannot be empty
+50111	401	Invalid OK-ACCESS-KEY
+50112	401	Invalid OK-ACCESS-TIMESTAMP
+50113	401	Invalid signature
+51000	400	Parameter {param0} error
+
+Wallet API
+Market API
+Token API
+API Reference
+Token Search
+Token Search#
+Search tokens by token name, symbol or token contract address.
+
+For token name or symbol search, return maximum 100 results by relevance.For token contract address, return the exact match result.
+
+Request URL#
+GET https://web3.okx.com/api/v6/dex/market/token/search
+
+Request Parameters#
+Parameter	Type	Required	Description
+chains	String	Yes	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+search	String	Yes	Search for token keywords, token address or token symbol
+Response Parameters#
+Parameter	Type	Description
+chainIndex	String	Unique identifier of the chain. (Such as 1: Ethereum, for more see the list of chainIndex )
+tokenName	String	Token name
+tokenSymbol	String	Token identification
+tokenLogoUrl	String	Token icon url
+tokenContractAddress	String	Token contract address
+decimal	String	Token precision
+explorerUrl	String	Token Browser link
+change	String	24H price change ratio
+holders	String	Number of holders
+liquidity	String	Token liquidity (24h)
+marketCap	String	Token market cap
+price	String	Price
+tagList	Object	Label
+>communityRecognized	Boolean	True means it's listed in the Top 10 CEX or is community verifed
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/market/token/search?chains=1,10&search=weth' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+    "code": "0",
+    "data": [
+        {
+            "chainIndex": "1",
+            "change": "1.02",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            "holders": "886855",
+            "liquidity": "2188092231.7914506202196479164801803109959738",
+            "marketCap": "9916173829.907587128987514754",
+            "price": "4391.91765972826983527",
+            "tagList": {
+                "communityRecognized": true
+            },
+            "tokenContractAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            "tokenLogoUrl": "https://static.coinall.ltd/cdn/wallet/logo/WETH-0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2.png",
+            "tokenName": "Wrapped Ether",
+            "tokenSymbol": "WETH"
+        },
+        {
+            "chainIndex": "10",
+            "change": "1.57",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/optimism/token/0x4200000000000000000000000000000000000006",
+            "holders": "",
+            "liquidity": "8066012.857541468860969364926025092091",
+            "marketCap": "89347769.41928855897874667",
+            "price": "4388.588953537819147873",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0x4200000000000000000000000000000000000006",
+            "tokenLogoUrl": "https://static.coinall.ltd/cdn/wallet/logo/WETH-0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2.png",
+            "tokenName": "Wrapped Ether",
+            "tokenSymbol": "WETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "0",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0x03928473f25bb2da6bc880b07ecbadc636822264",
+            "holders": "",
+            "liquidity": "290386.93658880514761888891240493783472",
+            "marketCap": "125306.637009951812221918",
+            "price": "1865.6119139683371",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0x03928473f25bb2da6bc880b07ecbadc636822264",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/default-logo/token_custom_logo_default_s.png/type=default_350_0",
+            "tokenName": "Static Aave Ethereum WETH",
+            "tokenSymbol": "stataEthWETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0xa684eaf215ad323452e2b2bf6f817d4aa5c116ab",
+            "holders": "",
+            "liquidity": "282162.925026260171260600639527587053876",
+            "marketCap": "2708767.72448012889795138",
+            "price": "4709.630733200069922727",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0xa684eaf215ad323452e2b2bf6f817d4aa5c116ab",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/1-0xa684eaf215ad323452e2b2bf6f817d4aa5c116ab-106/type=default_90_0?v=1756925210569",
+            "tokenName": "Loop Liquidity Pool - WETH",
+            "tokenSymbol": "lpETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0x5c6ee304399dbdb9c8ef030ab642b10820db8f56",
+            "holders": "2084",
+            "liquidity": "116461.577792709260809499466595788994488",
+            "marketCap": "36218431.822006716776613252",
+            "price": "5.339960118861368738",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0x5c6ee304399dbdb9c8ef030ab642b10820db8f56",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/1-0x5c6ee304399dbdb9c8ef030ab642b10820db8f56-106/type=default_90_0?v=1756916154072",
+            "tokenName": "Balancer 80 BAL 20 WETH",
+            "tokenSymbol": "B-80BAL-20WETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0x59cd1c87501baa753d0b5b5ab5d8416a45cd71db",
+            "holders": "3062",
+            "liquidity": "23099.0090680252518897028883167295250576",
+            "marketCap": "873724256.731651779318335243",
+            "price": "3073.898172687059849241",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0x59cd1c87501baa753d0b5b5ab5d8416a45cd71db",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/default-logo/token_custom_logo_default_s.png/type=default_350_0",
+            "tokenName": "Spark WETH",
+            "tokenSymbol": "spWETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0x2015bc0be96be4aea2aabc95522109acfec84c30",
+            "holders": "168",
+            "liquidity": "20290.228588047977267221819104361761613",
+            "marketCap": "12948.232224742",
+            "price": "0.000012948232224742",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0x2015bc0be96be4aea2aabc95522109acfec84c30",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/1-0x2015bc0be96be4aea2aabc95522109acfec84c30-106/type=default_90_0?v=1756940993907",
+            "tokenName": "WETH HEDZ",
+            "tokenSymbol": "HEDZ"
+        },
+        {
+            "chainIndex": "10",
+            "change": "",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/optimism/token/0xc4d4500326981eacd020e20a81b1c479c161c7ef",
+            "holders": "",
+            "liquidity": "13254.943087761946817613043627328123036048",
+            "marketCap": "611320.947975873134702172",
+            "price": "1456.890419322951364824",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0xc4d4500326981eacd020e20a81b1c479c161c7ef",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/10-0xc4d4500326981eacd020e20a81b1c479c161c7ef-106/type=default_90_0?v=1756917757030",
+            "tokenName": "exactly WETH",
+            "tokenSymbol": "exaWETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0x030ba81f1c18d280636f32af80b9aad02cf0854e",
+            "holders": "",
+            "liquidity": "12547.59168386404013787240620483741313585",
+            "marketCap": "35826020.242000942530530715",
+            "price": "1314.148440799180995081",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0x030ba81f1c18d280636f32af80b9aad02cf0854e",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/1666600000-0xe50fa9b3c56ffb159cb0fca61f5c9d750e8128c8-106/type=default_90_0?v=1756916162800",
+            "tokenName": "Aave interest bearing WETH",
+            "tokenSymbol": "aWETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "2.85",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0x4d5f47fa6a74757f35c14fd3a6ef8e3c9bc514e8",
+            "holders": "34257",
+            "liquidity": "11463.76396971485790593630247013424890962",
+            "marketCap": "4750418418.712334041035710975",
+            "price": "1907.640543775320052289",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0x4d5f47fa6a74757f35c14fd3a6ef8e3c9bc514e8",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/1-0x4d5f47fa6a74757f35c14fd3a6ef8e3c9bc514e8-106/type=default_90_0?v=1756917533831",
+            "tokenName": "Aave Ethereum WETH",
+            "tokenSymbol": "aEthWETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "2.53",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0xf951e335afb289353dc249e82926178eac7ded78",
+            "holders": "18161",
+            "liquidity": "573690.521874861978296864780127470294686829",
+            "marketCap": "118167328.627636452996603343",
+            "price": "4810.636535713744994382",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0xf951e335afb289353dc249e82926178eac7ded78",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/1-0xf951e335afb289353dc249e82926178eac7ded78-106/type=default_90_0?v=1756916429358",
+            "tokenName": "swETH",
+            "tokenSymbol": "swETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "1.09",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0xa250cc729bb3323e7933022a67b52200fe354767",
+            "holders": "129",
+            "liquidity": "432842.271496957013794432695201924702530761",
+            "marketCap": "308953196.848479131339625307",
+            "price": "4382.323930133209063397",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0xa250cc729bb3323e7933022a67b52200fe354767",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/default-logo/token_custom_logo_default_f.png/type=default_350_0",
+            "tokenName": "Few Wrapped Wrapped Ether",
+            "tokenSymbol": "fwWETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "0.86",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0xfae103dc9cf190ed75350761e95403b7b8afa6c0",
+            "holders": "6051",
+            "liquidity": "94590.872589521640507013935412981213469",
+            "marketCap": "97299486.614255600625166281",
+            "price": "4562.053912037697209607",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0xfae103dc9cf190ed75350761e95403b7b8afa6c0",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/1-0xfae103dc9cf190ed75350761e95403b7b8afa6c0-106/type=default_90_0?v=1756918311334",
+            "tokenName": "rswETH",
+            "tokenSymbol": "rswETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0x8e298734681adbfc41ee5d17ff8b0d6d803e7098",
+            "holders": "",
+            "liquidity": "67061.540612104310398692858222227724703",
+            "marketCap": "256182610.813755222831916009",
+            "price": "4122.319245593319382348",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0x8e298734681adbfc41ee5d17ff8b0d6d803e7098",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/default-logo/token_custom_logo_default_f.png/type=default_350_0",
+            "tokenName": "FARM_WETH",
+            "tokenSymbol": "fWETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0x90551c1795392094fe6d29b758eccd233cfaa260",
+            "holders": "741",
+            "liquidity": "23765.1203196336624818945354471916846708",
+            "marketCap": "7169375.619352028020506861",
+            "price": "4249.361573945986551465",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0x90551c1795392094fe6d29b758eccd233cfaa260",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/1-0x90551c1795392094fe6d29b758eccd233cfaa260-106/type=default_90_0?v=1756921635155",
+            "tokenName": "Fluid Wrapped Ether",
+            "tokenSymbol": "fWETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0xc585df3a8c9ca0c614d023a812624be36161502b",
+            "holders": "",
+            "liquidity": "5186.6585198126431857330171348192302664",
+            "marketCap": "945937.955473011322178552",
+            "price": "3295.093599759049722035",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0xc585df3a8c9ca0c614d023a812624be36161502b",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/default-logo/token_custom_logo_default_K.png/type=default_350_0",
+            "tokenName": "Karak - swETH",
+            "tokenSymbol": "KswETH"
+        },
+        {
+            "chainIndex": "1",
+            "change": "",
+            "decimal": "9",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0x3ca992ab59d77f1f72c87617fbff89a61c8dec19",
+            "holders": "154",
+            "liquidity": "11744.312223638733976406301174289191332",
+            "marketCap": "8058.2964779077",
+            "price": "0.000080582964779077",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0x3ca992ab59d77f1f72c87617fbff89a61c8dec19",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/1-0x3ca992ab59d77f1f72c87617fbff89a61c8dec19-106/type=default_90_0?v=1756916858337",
+            "tokenName": "Halloweth",
+            "tokenSymbol": "Heth"
+        },
+        {
+            "chainIndex": "1",
+            "change": "",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0x1609d8aa20295feb8831ae0931bae14acf7a9c91",
+            "holders": "",
+            "liquidity": "28860.994451383949923801031550409468869",
+            "marketCap": "18528.49701055747097576",
+            "price": "0.000000000044043123",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0x1609d8aa20295feb8831ae0931bae14acf7a9c91",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/default-logo/token_custom_logo_default_W.png/type=default_350_0",
+            "tokenName": "We The Pepe",
+            "tokenSymbol": "WTP"
+        },
+        {
+            "chainIndex": "1",
+            "change": "",
+            "decimal": "18",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0x76cddf8c2a011f6a0264363ac3f82f2993fc1fab",
+            "holders": "",
+            "liquidity": "23132.527870367083040975207711380759535",
+            "marketCap": "14353.657427732",
+            "price": "0.000014353657427732",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0x76cddf8c2a011f6a0264363ac3f82f2993fc1fab",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/1-0x76cddf8c2a011f6a0264363ac3f82f2993fc1fab-106/type=default_90_0?v=1756920804942",
+            "tokenName": "We The People",
+            "tokenSymbol": "POPULI"
+        },
+        {
+            "chainIndex": "1",
+            "change": "",
+            "decimal": "9",
+            "explorerUrl": "https://web3.okx.com/explorer/ethereum/token/0x4a38a8089f8d33d6595ace079f999327a58c700f",
+            "holders": "",
+            "liquidity": "10307.401749556132649599477026641937954",
+            "marketCap": "6914.14719751533",
+            "price": "0.000000016435254457",
+            "tagList": {
+                "communityRecognized": false
+            },
+            "tokenContractAddress": "0x4a38a8089f8d33d6595ace079f999327a58c700f",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/1-0x4a38a8089f8d33d6595ace079f999327a58c700f-106/type=default_90_0?v=1756938301307",
+            "tokenName": "New Ethereum Project",
+            "tokenSymbol": "PROTOCOL"
+        }
+    ],
+    "msg": ""
+}
+
+Wallet API
+Market API
+Token API
+API Reference
+Token Basic Information
+Token Basic Information#
+Retrieve the basic token information of the specified token contract address
+
+Request URL#
+POST https://web3.okx.com/api/v6/dex/market/token/basic-info
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	Yes	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+tokenContractAddress	String	Yes	Token contract address (e.g., 0x382bb369d343125bfb2117af9c149795c6c65c50)
+Response Parameters#
+Parameter	Type	Description
+chainIndex	String	Unique identifier of the chain. (Such as 1: Ethereum, for more see the list of chainIndex )
+tokenName	String	Token name
+tokenSymbol	String	Token identification
+tokenLogoUrl	String	Token icon url
+decimal	String	Token precision
+tagList	Object	Label
+>communityRecognized	Boolean	True means it's listed in the Top 10 CEX or is community verifed
+Request Example#
+shell
+curl --location --request POST 'https://web3.okx.com/api/v6/dex/market/token/basic-info' \
+--header 'Content-Type: application/json' \
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z' \
+--data-raw '[
+     {
+    "chainIndex": "501",
+    "tokenContractAddress": "5mbK36SZ7J19An8jFochhQS4of8g6BwUjbeCSxBSoWdp"
+},
+{
+
+     "chainIndex": "501",
+    "tokenContractAddress": "eL5fUxj2J4CiQsmW85k5FG9DvuQjjUoBHoQBi2Kpump"
+    
+}
+]'
+Response Example#
+200
+{
+    "code": "0",
+    "data": [
+        {
+            "chainIndex": "501",
+            "decimal": "6",
+            "tagList": {
+                "communityRecognized": true
+            },
+            "tokenContractAddress": "5mbK36SZ7J19An8jFochhQS4of8g6BwUjbeCSxBSoWdp",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/small/501-5mbK36SZ7J19An8jFochhQS4of8g6BwUjbeCSxBSoWdp-106?v=1749146943562",
+            "tokenName": "michi",
+            "tokenSymbol": "$michi"
+        },
+        {
+            "chainIndex": "501",
+            "decimal": "6",
+            "tagList": {
+                "communityRecognized": true
+            },
+            "tokenContractAddress": "eL5fUxj2J4CiQsmW85k5FG9DvuQjjUoBHoQBi2Kpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-eL5fUxj2J4CiQsmW85k5FG9DvuQjjUoBHoQBi2Kpump-108/type=default_90_0?v=1755815305433",
+            "tokenName": "Unicorn Fart Dust",
+            "tokenSymbol": "UFD"
+        }
+    ],
+    "msg": ""
+}
+
+Wallet API
+Market API
+Token API
+API Reference
+Token Trading Information
+Token Trading Information#
+Return token trading information including price, volume, trading info, supply, holders, liquidity etc at specific timestamp, support max 100 multiple tokens query.
+
+Request URL#
+POST https://web3.okx.com/api/v6/dex/market/price-info
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	Yes	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+tokenContractAddress	String	Yes	Token contract address (e.g., 0x382bb369d343125bfb2117af9c149795c6c65c50)
+Response Parameters#
+Parameter	Type	Description
+chainIndex	String	Unique identifier of the chain.
+e.g., 1: Ethereum.
+See more here
+tokenContractAddress	String	Token contract address (e.g. 0x382bb369d343125bfb2117af9c149795c6c65c50)
+time	String	Price timestamp, using Unix Millisecond timestamp format
+price	String	Latest token price
+marketCap	String	Token market cap
+priceChange5M	String	Price changes within 5 minutes, in percentage increase or decrease
+priceChange1H	String	Price changes within one hour, expressed as a percentage increase or decrease
+priceChange4H	String	Price changes within 4 hours, expressed as a percentage increase or decrease
+priceChange24H	String	Price changes within 24 hours, expressed as a percentage increase or decrease
+volume5M	String	Trading volume within 5 minutes
+volume1H	String	Trading volume within 1 hour
+volume4H	String	Trading volume within 4 hours
+volume24H	String	Trading volume within 24 hours
+txs5M	String	Token transactions within 5 minutes
+txs1H	String	Token transactions within 1 hour
+txs4H	String	Token transactions within 4 hours
+txs24H	String	Number of token transactions within 24 hours
+maxPrice	String	Token 24h highest price
+tradeNum	String	24H token trading quantity
+minPrice	String	Token 24h lowest price
+circSupply	String	Token circulation supply
+liquidity	String	Liquidity in the token pool
+holders	String	Number of token holding addresses
+Request Example#
+shell
+curl --location --request POST 'https://web3.okx.com/api/v6/dex/market/price-info' \
+--header 'Content-Type: application/json' \
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z' \
+--data-raw '[
+     {
+    "chainIndex": "501",
+    "tokenContractAddress": "5mbK36SZ7J19An8jFochhQS4of8g6BwUjbeCSxBSoWdp"
+},
+{
+
+     "chainIndex": "501",
+    "tokenContractAddress": "eL5fUxj2J4CiQsmW85k5FG9DvuQjjUoBHoQBi2Kpump"
+    
+}
+]'
+Response Example#
+200
+{
+    "code": "0",
+    "data": [
+        {
+            "chainIndex": "501",
+            "circSupply": "555761678.7348550000",
+            "holders": "46998",
+            "liquidity": "2909733.283759244562509712218832656",
+            "marketCap": "12252728.212049527112081409",
+            "maxPrice": "0.023000175796511334",
+            "minPrice": "0.021290716539724027",
+            "price": "0.022046730965585534",
+            "priceChange1H": "-1.24",
+            "priceChange24H": "-1.8",
+            "priceChange4H": "-2.64",
+            "priceChange5M": "0.22",
+            "time": "1756816961600",
+            "tokenContractAddress": "5mbK36SZ7J19An8jFochhQS4of8g6BwUjbeCSxBSoWdp",
+            "tradeNum": "9577269.994247",
+            "txs1H": "27664",
+            "txs24H": "127879",
+            "txs4H": "108489",
+            "txs5M": "2265",
+            "volume1H": "7376.6139697593500223",
+            "volume24H": "213047.96235814982022456",
+            "volume4H": "33943.03136454470008366",
+            "volume5M": "544.69701090069000181"
+        },
+        {
+            "chainIndex": "501",
+            "circSupply": "999973538.9201610000",
+            "holders": "37302",
+            "liquidity": "2946946.965800864848335614721052390",
+            "marketCap": "25792746.281014184438384254",
+            "maxPrice": "0.026539875867707924",
+            "minPrice": "0.02427728431412691",
+            "price": "0.025793428802993062",
+            "priceChange1H": "-1.13",
+            "priceChange24H": "3.4",
+            "priceChange4H": "-2.07",
+            "priceChange5M": "0.52",
+            "time": "1756816961600",
+            "tokenContractAddress": "eL5fUxj2J4CiQsmW85k5FG9DvuQjjUoBHoQBi2Kpump",
+            "tradeNum": "10046562.105494",
+            "txs1H": "166",
+            "txs24H": "2888",
+            "txs4H": "322",
+            "txs5M": "29",
+            "volume1H": "10343.0564689259900202",
+            "volume24H": "253496.67765782958052983",
+            "volume4H": "21530.5160926891601342",
+            "volume5M": "3278.85450250897"
+        }
+    ],
+    "msg": ""
+}
+
+Wallet API
+Market API
+Token API
+API Reference
+Token Ranking List
+Token Ranking List#
+Return token ranking list based on price fluctuations, trading volume or market cap within the specified timeframe in descending order,maximum 100 results
+
+Request URL#
+GET https://web3.okx.com/api/v6/dex/market/token/toplist
+
+Request Parameters#
+Parameter	Type	Required	Description
+chains	String	Yes	Unique identifier of the chain, e.g., 1: Ethereum.See more here.
+Supports querying multiple chains, seperated by commas.
+sortBy	String	Yes	Input 2,return token ranking lists based on price fluctuations
+Input 5, return token ranking lists based on trading volume
+Input 6,return token ranking lists based on market cap
+timeFrame	String	Yes	1：5m,
+2：1h,
+3：4h
+4：24h
+Response Parameters#
+Parameter	Type	Description
+chainIndex	String	Unique identifier of the chain. (Such as 1: Ethereum, for more see the list of chainIndex. )
+tokenSymbol	String	Token identification
+tokenLogoUrl	String	Token icon url
+tokenContractAddress	String	Token contract address
+marketCap	String	Token market cap, token price multiplied by circulating supply
+volume	String	Token trading USD value
+firstTradeTime	String	Token first transaction time
+change	String	Proportion of token price change
+liquidity	String	Liquidity in the token pool
+price	String	Token price
+holders	String	Number of token holding addresses
+uniqueTraders	String	Number of token unique trading addresses at a specified time
+txsBuy	String	Number of purchases at the specified time
+txsSell	String	Number of sales at a specified time
+txs	String	Number of transactions at a specified time
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/market/token/toplist?chains=501&sortBy=2&timeFrame=1' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+    "code": "0",
+    "data": [
+        {
+            "chainIndex": "501",
+            "change": "2022.46",
+            "firstTradeTime": "1756817281000",
+            "holders": "82",
+            "liquidity": "1879425.106935120795227971",
+            "marketCap": "2306047.701895103",
+            "price": "0.002306047701895103",
+            "tokenContractAddress": "2fBioj73cpdEFNczg5LNU6rgeTzYjHqhn6FGg5JJ3eSu",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-2fBioj73cpdEFNczg5LNU6rgeTzYjHqhn6FGg5JJ3eSu-108/type=default_90_0?v=1756817284604",
+            "tokenSymbol": "SOMNIA",
+            "txs": "159",
+            "txsBuy": "82",
+            "txsSell": "77",
+            "uniqueTraders": "56",
+            "volume": "66302.6442408798505016"
+        },
+        {
+            "chainIndex": "501",
+            "change": "1989.39",
+            "firstTradeTime": "1756817267000",
+            "holders": "135",
+            "liquidity": "92935.605935683173018898",
+            "marketCap": "2068281.512847419",
+            "price": "0.002068281512847419",
+            "tokenContractAddress": "8yLDUQxmnefTgJMuGRsfWK6ZpFQ6xuox5rXRBNQ1ZZB4",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-8yLDUQxmnefTgJMuGRsfWK6ZpFQ6xuox5rXRBNQ1ZZB4-108/type=default_90_0?v=1756817268811",
+            "tokenSymbol": "Froggy",
+            "txs": "261",
+            "txsBuy": "148",
+            "txsSell": "113",
+            "uniqueTraders": "102",
+            "volume": "74823.758787540322738"
+        },
+        {
+            "chainIndex": "501",
+            "change": "1058.3",
+            "firstTradeTime": "1756817174000",
+            "holders": "160",
+            "liquidity": "85349.876607952601183713",
+            "marketCap": "2073732.175809067",
+            "price": "0.002073732175809067",
+            "tokenContractAddress": "H5cQFT1zGkDLURJ6b5Pzm9iZcrRbo6VcMurJPAHq9U7o",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-H5cQFT1zGkDLURJ6b5Pzm9iZcrRbo6VcMurJPAHq9U7o-108/type=default_90_0?v=1756817176283",
+            "tokenSymbol": "Froggie",
+            "txs": "718",
+            "txsBuy": "390",
+            "txsSell": "328",
+            "uniqueTraders": "149",
+            "volume": "147565.706687239476516"
+        },
+        {
+            "chainIndex": "501",
+            "change": "1014.29",
+            "firstTradeTime": "1756817324000",
+            "holders": "17",
+            "liquidity": "1893459.465171589063908358",
+            "marketCap": "2323677.729778543",
+            "price": "0.002323677729778543",
+            "tokenContractAddress": "49AnnzZq3FnL8ofHC89Duq4SnLm6yUxfjRV8duHaMioo",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-49AnnzZq3FnL8ofHC89Duq4SnLm6yUxfjRV8duHaMioo-108/type=default_90_0?v=1756817325587",
+            "tokenSymbol": "Froggy",
+            "txs": "33",
+            "txsBuy": "23",
+            "txsSell": "10",
+            "uniqueTraders": "13",
+            "volume": "48554.287860729174464"
+        },
+        {
+            "chainIndex": "501",
+            "change": "897.27",
+            "firstTradeTime": "1756817154000",
+            "holders": "192",
+            "liquidity": "75884.421084854656282973",
+            "marketCap": "1773957.694951651",
+            "price": "0.001773957694951651",
+            "tokenContractAddress": "FjUnoYwYBUc5kqwLFEYe2imDtq9x7dZGDR8REzc5gqXu",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-FjUnoYwYBUc5kqwLFEYe2imDtq9x7dZGDR8REzc5gqXu-108/type=default_90_0?v=1756817156272",
+            "tokenSymbol": "Diaminu",
+            "txs": "975",
+            "txsBuy": "542",
+            "txsSell": "433",
+            "uniqueTraders": "182",
+            "volume": "179727.147100923050173"
+        },
+        {
+            "chainIndex": "501",
+            "change": "687.3",
+            "firstTradeTime": "1756817257000",
+            "holders": "92",
+            "liquidity": "14012.601216005533678184",
+            "marketCap": "45126.599462127",
+            "price": "0.000045126599462127",
+            "tokenContractAddress": "Gx4XzK9webKtf5yFCCKGpVLzqkyDKmKpjLSudfnYpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-Gx4XzK9webKtf5yFCCKGpVLzqkyDKmKpjLSudfnYpump-108/type=default_90_0?v=1756817259972",
+            "tokenSymbol": "FROG",
+            "txs": "455",
+            "txsBuy": "245",
+            "txsSell": "210",
+            "uniqueTraders": "184",
+            "volume": "67008.67653863694713376"
+        },
+        {
+            "chainIndex": "501",
+            "change": "252.46",
+            "firstTradeTime": "1756817068000",
+            "holders": "148",
+            "liquidity": "11032.889894624904861453",
+            "marketCap": "22308.741908356",
+            "price": "0.000022308741908356",
+            "tokenContractAddress": "A9wDc5pG1SeyfhzaLYNWzUMck5oJqZ8RSVc4Z9xnpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-A9wDc5pG1SeyfhzaLYNWzUMck5oJqZ8RSVc4Z9xnpump-108/type=default_90_0?v=1756817073526",
+            "tokenSymbol": "Froggie",
+            "txs": "1361",
+            "txsBuy": "726",
+            "txsSell": "635",
+            "uniqueTraders": "441",
+            "volume": "209960.160543612614763145"
+        },
+        {
+            "chainIndex": "501",
+            "change": "75.3",
+            "firstTradeTime": "1756817219000",
+            "holders": "34",
+            "liquidity": "7323.515695454196350214",
+            "marketCap": "10675.783299905",
+            "price": "0.000010675783299905",
+            "tokenContractAddress": "85FxoUES38v2D6M3YyARGGFaaLkCv6QxWjukodEwpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-85FxoUES38v2D6M3YyARGGFaaLkCv6QxWjukodEwpump-108/type=default_90_0?v=1756817232853",
+            "tokenSymbol": "Blobby Man",
+            "txs": "164",
+            "txsBuy": "89",
+            "txsSell": "75",
+            "uniqueTraders": "82",
+            "volume": "13510.406610950301260508"
+        },
+        {
+            "chainIndex": "501",
+            "change": "71.98",
+            "firstTradeTime": "1756817103000",
+            "holders": "37",
+            "liquidity": "7045.546426281110103218",
+            "marketCap": "10069.235886313",
+            "price": "0.000010069235886313",
+            "tokenContractAddress": "CJtUqq3bjPzYVStSuSqLTGbdFCdx8SF4e6KUYRk7pump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-CJtUqq3bjPzYVStSuSqLTGbdFCdx8SF4e6KUYRk7pump-108/type=default_90_0?v=1756817105010",
+            "tokenSymbol": "UFT",
+            "txs": "279",
+            "txsBuy": "148",
+            "txsSell": "131",
+            "uniqueTraders": "86",
+            "volume": "14520.066055244963147296"
+        },
+        {
+            "chainIndex": "501",
+            "change": "62.56",
+            "firstTradeTime": "1756817152000",
+            "holders": "21",
+            "liquidity": "131652.987361751835318228",
+            "marketCap": "93453.42572654",
+            "price": "0.00009345342572654",
+            "tokenContractAddress": "4d9EfTpxJKaPKpza1ENojiuY3jPHfUThxoNQEuecT5kh",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-4d9EfTpxJKaPKpza1ENojiuY3jPHfUThxoNQEuecT5kh-108/type=default_90_0?v=1756816432260",
+            "tokenSymbol": "BARKY",
+            "txs": "26",
+            "txsBuy": "26",
+            "txsSell": "0",
+            "uniqueTraders": "18",
+            "volume": "14251.26048527397244897"
+        },
+        {
+            "chainIndex": "501",
+            "change": "49.93",
+            "firstTradeTime": "1755706155000",
+            "holders": "1497",
+            "liquidity": "98709.611525230925225582",
+            "marketCap": "403887.798597632848813235",
+            "price": "0.000403906190167366",
+            "tokenContractAddress": "9xzF5pmvWcEhmCCnuXKXttdF6HfQFy5V246v34SFpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-9xzF5pmvWcEhmCCnuXKXttdF6HfQFy5V246v34SFpump-108/type=default_90_0?v=1756553365620",
+            "tokenSymbol": "PMP",
+            "txs": "91",
+            "txsBuy": "57",
+            "txsSell": "34",
+            "uniqueTraders": "67",
+            "volume": "22148.86491423674785406"
+        },
+        {
+            "chainIndex": "501",
+            "change": "30.74",
+            "firstTradeTime": "1756816839000",
+            "holders": "139",
+            "liquidity": "11686.356699533866082067",
+            "marketCap": "25422.963359543",
+            "price": "0.000025422963359543",
+            "tokenContractAddress": "HjkLxt2t196iTQz2NEE8b3tHbGCPpHij6N4ddkZpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-HjkLxt2t196iTQz2NEE8b3tHbGCPpHij6N4ddkZpump-108/type=default_90_0?v=1756816873473",
+            "tokenSymbol": "Ⅳ",
+            "txs": "286",
+            "txsBuy": "203",
+            "txsSell": "83",
+            "uniqueTraders": "140",
+            "volume": "17984.008434328438638037"
+        },
+        {
+            "chainIndex": "501",
+            "change": "18.86",
+            "firstTradeTime": "1756804973000",
+            "holders": "4763",
+            "liquidity": "58795.265442791133885032",
+            "marketCap": "202815.68975336383171415",
+            "price": "0.000202816839897315",
+            "tokenContractAddress": "77zu17bv8G4p2tKB1VNGt3G5XaciMaMcHuKdFaRdgKNB",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-77zu17bv8G4p2tKB1VNGt3G5XaciMaMcHuKdFaRdgKNB-108/type=default_90_0?v=1756804974763",
+            "tokenSymbol": "USDMC",
+            "txs": "292",
+            "txsBuy": "180",
+            "txsSell": "112",
+            "uniqueTraders": "151",
+            "volume": "30067.94208777356207428"
+        },
+        {
+            "chainIndex": "501",
+            "change": "14.38",
+            "firstTradeTime": "1756816237000",
+            "holders": "60",
+            "liquidity": "260429.231680142778574054",
+            "marketCap": "192710.222700692590387621",
+            "price": "0.000192710676094279",
+            "tokenContractAddress": "GPJY1V2Uu1SzNaJZHeEBCgLzn1fuT7z9dLsFeUvg8T4z",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-GPJY1V2Uu1SzNaJZHeEBCgLzn1fuT7z9dLsFeUvg8T4z-108/type=default_90_0?v=1756816166614",
+            "tokenSymbol": "TRADOOR",
+            "txs": "1843",
+            "txsBuy": "922",
+            "txsSell": "921",
+            "uniqueTraders": "51",
+            "volume": "1846125.2049301402716"
+        },
+        {
+            "chainIndex": "501",
+            "change": "14.04",
+            "firstTradeTime": "1756816677000",
+            "holders": "282",
+            "liquidity": "48463.704883897680756153",
+            "marketCap": "119792.661508354057359712",
+            "price": "0.000119792930788857",
+            "tokenContractAddress": "4JJe26d3J7cMq9bTpQexa8UDizXWuMJqV1osYctjbonk",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-4JJe26d3J7cMq9bTpQexa8UDizXWuMJqV1osYctjbonk-108/type=default_90_0?v=1756816676181",
+            "tokenSymbol": "commodity",
+            "txs": "482",
+            "txsBuy": "255",
+            "txsSell": "227",
+            "uniqueTraders": "174",
+            "volume": "18195.73937606113859018"
+        },
+        {
+            "chainIndex": "501",
+            "change": "12.05",
+            "firstTradeTime": "1756816771000",
+            "holders": "286",
+            "liquidity": "46464.418791554785140646",
+            "marketCap": "110133.885010382606960702",
+            "price": "0.00011074182298676",
+            "tokenContractAddress": "HKZ3qUCah4679ArZXi25bpTAdQkUXZVyJ9MQUQ3ebonk",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-HKZ3qUCah4679ArZXi25bpTAdQkUXZVyJ9MQUQ3ebonk-108/type=default_90_0?v=1756816768056",
+            "tokenSymbol": "commodity",
+            "txs": "529",
+            "txsBuy": "271",
+            "txsSell": "258",
+            "uniqueTraders": "166",
+            "volume": "21130.432670260435783926"
+        },
+        {
+            "chainIndex": "501",
+            "change": "11.25",
+            "firstTradeTime": "1756314247000",
+            "holders": "1679",
+            "liquidity": "196928.642226023874498611",
+            "marketCap": "1048033.221144608560937667",
+            "price": "0.001048033653071918",
+            "tokenContractAddress": "FfixAeHevSKBZWoXPTbLk4U4X9piqvzGKvQaFo3cpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-FfixAeHevSKBZWoXPTbLk4U4X9piqvzGKvQaFo3cpump-108/type=webp_90_0?v=1756314249180",
+            "tokenSymbol": "POLYFACTS",
+            "txs": "129",
+            "txsBuy": "52",
+            "txsSell": "77",
+            "uniqueTraders": "108",
+            "volume": "21422.1482206240017355"
+        },
+        {
+            "chainIndex": "501",
+            "change": "10.28",
+            "firstTradeTime": "1756816849000",
+            "holders": "113",
+            "liquidity": "47064.196882814850861275",
+            "marketCap": "32673.339958935702263041",
+            "price": "0.000032491707104644",
+            "tokenContractAddress": "ERavPgzsG69jem88y22kiKCSsTPcsecbJYAeSun3T4mR",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-ERavPgzsG69jem88y22kiKCSsTPcsecbJYAeSun3T4mR-108/type=default_90_0?v=1756816794043",
+            "tokenSymbol": "JPUSD",
+            "txs": "676",
+            "txsBuy": "424",
+            "txsSell": "252",
+            "uniqueTraders": "102",
+            "volume": "54658.57307647939379818"
+        },
+        {
+            "chainIndex": "501",
+            "change": "9.15",
+            "firstTradeTime": "1756816910000",
+            "holders": "112",
+            "liquidity": "46319.633191192228323872",
+            "marketCap": "31679.616279152344458346",
+            "price": "0.000031679817725352",
+            "tokenContractAddress": "h6ATe7aTKizjNDtzXLpQL6ATZ5aWyvnSrMfpCb4Sqyb",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-h6ATe7aTKizjNDtzXLpQL6ATZ5aWyvnSrMfpCb4Sqyb-108/type=default_90_0?v=1756816854020",
+            "tokenSymbol": "Tokabu",
+            "txs": "670",
+            "txsBuy": "425",
+            "txsSell": "245",
+            "uniqueTraders": "103",
+            "volume": "50574.669872156585311845"
+        },
+        {
+            "chainIndex": "501",
+            "change": "8.81",
+            "firstTradeTime": "1721244265000",
+            "holders": "1117",
+            "liquidity": "84216.447787284889106843",
+            "marketCap": "478266.1908833959771361",
+            "price": "0.000478822309574452",
+            "tokenContractAddress": "8EPFXce1eGU7ePRMp8z3ZSu7rT7eczKB7VaysX4Rpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-8EPFXce1eGU7ePRMp8z3ZSu7rT7eczKB7VaysX4Rpump-108/type=default_90_0?v=1756776508370",
+            "tokenSymbol": "GIB",
+            "txs": "653",
+            "txsBuy": "333",
+            "txsSell": "320",
+            "uniqueTraders": "334",
+            "volume": "300168.4703874356571827"
+        },
+        {
+            "chainIndex": "501",
+            "change": "8.8",
+            "firstTradeTime": "1756808201000",
+            "holders": "208",
+            "liquidity": "143071.497204747476008732",
+            "marketCap": "5746512.075769158",
+            "price": "0.5746512075769158",
+            "tokenContractAddress": "7odQZLuEwiv3pi8R6kqLgXAKoauMGsaAKXy24Hgfo4iB",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-7odQZLuEwiv3pi8R6kqLgXAKoauMGsaAKXy24Hgfo4iB-108/type=default_90_0?v=1756808203257",
+            "tokenSymbol": "THE PEBBLE",
+            "txs": "1148",
+            "txsBuy": "587",
+            "txsSell": "561",
+            "uniqueTraders": "160",
+            "volume": "132182.7131730246420993"
+        },
+        {
+            "chainIndex": "501",
+            "change": "8.01",
+            "firstTradeTime": "1756810486000",
+            "holders": "5166",
+            "liquidity": "188475.50034245594858762",
+            "marketCap": "153140.294967924",
+            "price": "0.000153140294967924",
+            "tokenContractAddress": "CddRHVMf3xWhBxQEkK7WQDXPzYFTGWVqfi6PijNg5wTS",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-CddRHVMf3xWhBxQEkK7WQDXPzYFTGWVqfi6PijNg5wTS-108/type=default_90_0?v=1756810515269",
+            "tokenSymbol": "ONE PIECE",
+            "txs": "1486",
+            "txsBuy": "864",
+            "txsSell": "622",
+            "uniqueTraders": "263",
+            "volume": "250600.7146032930388663"
+        },
+        {
+            "chainIndex": "501",
+            "change": "6.56",
+            "firstTradeTime": "1756816734000",
+            "holders": "205",
+            "liquidity": "99369.494981259308774054",
+            "marketCap": "2914020.419135382",
+            "price": "0.002914020419135382",
+            "tokenContractAddress": "HhYihEk2SaT4EKRAgA2C1ds8h9jN7aD3hZKbTjre7bNA",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-HhYihEk2SaT4EKRAgA2C1ds8h9jN7aD3hZKbTjre7bNA-108/type=default_90_0?v=1756816735407",
+            "tokenSymbol": "MANGOBIRD",
+            "txs": "1493",
+            "txsBuy": "827",
+            "txsSell": "666",
+            "uniqueTraders": "200",
+            "volume": "177448.50671647199706424"
+        },
+        {
+            "chainIndex": "501",
+            "change": "5.83",
+            "firstTradeTime": "1752019086000",
+            "holders": "1258",
+            "liquidity": "230097.771344113781214109",
+            "marketCap": "1938312.098571112883149527",
+            "price": "0.00193985502138577",
+            "tokenContractAddress": "EebvSxfGbjyHMJ2bu1jhtNidbhVbQJtcg9y561Kipump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-EebvSxfGbjyHMJ2bu1jhtNidbhVbQJtcg9y561Kipump-108/type=default_90_0?v=1756682045165",
+            "tokenSymbol": "ZARD",
+            "txs": "88",
+            "txsBuy": "45",
+            "txsSell": "43",
+            "uniqueTraders": "41",
+            "volume": "17662.79395007747064292"
+        },
+        {
+            "chainIndex": "501",
+            "change": "4.87",
+            "firstTradeTime": "1756815650000",
+            "holders": "546",
+            "liquidity": "139310.558951493673723994",
+            "marketCap": "103756.2019846",
+            "price": "0.000010310161269128",
+            "tokenContractAddress": "6ffWGbyR3Hrr6tzjTkMAxATPa42JxWhmVJiCmPv6h9vD",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-6ffWGbyR3Hrr6tzjTkMAxATPa42JxWhmVJiCmPv6h9vD-108/type=default_90_0?v=1756815613592",
+            "tokenSymbol": "USDMC",
+            "txs": "1067",
+            "txsBuy": "569",
+            "txsSell": "498",
+            "uniqueTraders": "230",
+            "volume": "217076.52273519271564663"
+        },
+        {
+            "chainIndex": "501",
+            "change": "4.08",
+            "firstTradeTime": "1756816121000",
+            "holders": "533",
+            "liquidity": "176498.376991055636983963",
+            "marketCap": "119031.911888089879837479",
+            "price": "0.000119031926990248",
+            "tokenContractAddress": "BrgHBrXYU71is1HcNytcrgS2GmhgQCEKc32j5MG34q6f",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-BrgHBrXYU71is1HcNytcrgS2GmhgQCEKc32j5MG34q6f-108/type=default_90_0?v=1756816153537",
+            "tokenSymbol": "USDMC",
+            "txs": "1715",
+            "txsBuy": "918",
+            "txsSell": "797",
+            "uniqueTraders": "166",
+            "volume": "1419158.8875468562698442"
+        },
+        {
+            "chainIndex": "501",
+            "change": "1.98",
+            "firstTradeTime": "1752716161000",
+            "holders": "5349",
+            "liquidity": "959753.501266530949870961",
+            "marketCap": "8746128.422067497138265686",
+            "price": "0.008750528751440552",
+            "tokenContractAddress": "2oQNkePakuPbHzrVVkQ875WHeewLHCd2cAwfwiLQbonk",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-2oQNkePakuPbHzrVVkQ875WHeewLHCd2cAwfwiLQbonk-108/type=default_90_0?v=1755778887746",
+            "tokenSymbol": "AOL",
+            "txs": "73",
+            "txsBuy": "32",
+            "txsSell": "41",
+            "uniqueTraders": "32",
+            "volume": "28579.08751165764033952"
+        },
+        {
+            "chainIndex": "501",
+            "change": "1.41",
+            "firstTradeTime": "1756809674000",
+            "holders": "1059",
+            "liquidity": "56482.892992827244299535",
+            "marketCap": "215305.560175936875167839",
+            "price": "0.000215305699270649",
+            "tokenContractAddress": "HMcQvSj8hEqdkbyPbEUmiU6mnu5k2Ki5y5J65ebpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-HMcQvSj8hEqdkbyPbEUmiU6mnu5k2Ki5y5J65ebpump-108/type=default_90_0?v=1756809677266",
+            "tokenSymbol": "KITTY",
+            "txs": "1438",
+            "txsBuy": "780",
+            "txsSell": "658",
+            "uniqueTraders": "585",
+            "volume": "104245.124277390296519518"
+        },
+        {
+            "chainIndex": "501",
+            "change": "1.07",
+            "firstTradeTime": "1747606449000",
+            "holders": "9477",
+            "liquidity": "3230670.928656840071469246",
+            "marketCap": "52802397.564394416783409086",
+            "price": "0.052806821443135322",
+            "tokenContractAddress": "CB9dDufT3ZuQXqqSfa1c5kY935TEreyBw9XJXxHKpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-CB9dDufT3ZuQXqqSfa1c5kY935TEreyBw9XJXxHKpump-108/type=default_90_0?v=1755847029086",
+            "tokenSymbol": "USDUC",
+            "txs": "329",
+            "txsBuy": "192",
+            "txsSell": "137",
+            "uniqueTraders": "113",
+            "volume": "46265.685740000620042"
+        },
+        {
+            "chainIndex": "501",
+            "change": "1.03",
+            "firstTradeTime": "1756664069000",
+            "holders": "133",
+            "liquidity": "62057.619989926922236819",
+            "marketCap": "274703.021291954",
+            "price": "0.000274703021291954",
+            "tokenContractAddress": "HNwh4FSc9mTH4p9j42LwBGLFaNRvBF7AAskcvQ6Ppump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-HNwh4FSc9mTH4p9j42LwBGLFaNRvBF7AAskcvQ6Ppump-108/type=default_90_0?v=1756764219844",
+            "tokenSymbol": "HOPE",
+            "txs": "175",
+            "txsBuy": "130",
+            "txsSell": "45",
+            "uniqueTraders": "42",
+            "volume": "17406.45868918717628976"
+        },
+        {
+            "chainIndex": "501",
+            "change": "0.95",
+            "firstTradeTime": "1740949246000",
+            "holders": "20714",
+            "liquidity": "1594822.515115390943909249",
+            "marketCap": "7756827.713473804622872756",
+            "price": "0.007757714960340776",
+            "tokenContractAddress": "CniPCE4b3s8gSUPhUiyMjXnytrEqUrMfSsnbBjLCpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-CniPCE4b3s8gSUPhUiyMjXnytrEqUrMfSsnbBjLCpump-108/type=default_90_0?v=1755828682923",
+            "tokenSymbol": "pwease",
+            "txs": "133",
+            "txsBuy": "86",
+            "txsSell": "47",
+            "uniqueTraders": "71",
+            "volume": "27256.35945966481044445"
+        },
+        {
+            "chainIndex": "501",
+            "change": "0.28",
+            "firstTradeTime": "1749247401000",
+            "holders": "10247",
+            "liquidity": "2862763.031465412908522645",
+            "marketCap": "40600564.991735767807254698",
+            "price": "0.040653924365789036",
+            "tokenContractAddress": "H8xQ6poBjB9DTPMDTKWzWPrnxu4bDEhybxiouF8Ppump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-H8xQ6poBjB9DTPMDTKWzWPrnxu4bDEhybxiouF8Ppump-108/type=default_90_0?v=1755850364794",
+            "tokenSymbol": "Tokabu",
+            "txs": "224",
+            "txsBuy": "109",
+            "txsSell": "115",
+            "uniqueTraders": "59",
+            "volume": "16155.45452672287000046"
+        },
+        {
+            "chainIndex": "501",
+            "change": "0.01",
+            "firstTradeTime": "1741648846000",
+            "holders": "257",
+            "liquidity": "20492752.06680118772222342",
+            "marketCap": "327987695.280425384109332464",
+            "price": "0.999582416469253323",
+            "tokenContractAddress": "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH-108/type=default_90_0?v=1756797958448",
+            "tokenSymbol": "USDG",
+            "txs": "223",
+            "txsBuy": "88",
+            "txsSell": "135",
+            "uniqueTraders": "52",
+            "volume": "44986.25270077389012"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.02",
+            "firstTradeTime": "1737165693000",
+            "holders": "636702",
+            "liquidity": "336626054.806566640071151926",
+            "marketCap": "1658904007.245981009619110273",
+            "price": "8.294548857547532416",
+            "tokenContractAddress": "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN-108/type=default_90_0?v=1756791330135",
+            "tokenSymbol": "TRUMP",
+            "txs": "332",
+            "txsBuy": "87",
+            "txsSell": "245",
+            "uniqueTraders": "67",
+            "volume": "675964.0777230149"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.09",
+            "firstTradeTime": "1701848394000",
+            "holders": "18340",
+            "liquidity": "8467691.620883390777782272",
+            "marketCap": "200181415.37351283395756281",
+            "price": "0.200184919068676607",
+            "tokenContractAddress": "METAewgxyPbgwsseH8T16a39CQ5VyVxZi9zXiDPY18m",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-METAewgxyPbgwsseH8T16a39CQ5VyVxZi9zXiDPY18m-108/type=default_90_0?v=1756765320384",
+            "tokenSymbol": "MPLX",
+            "txs": "190",
+            "txsBuy": "97",
+            "txsSell": "93",
+            "uniqueTraders": "40",
+            "volume": "19607.67215057749002"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.14",
+            "firstTradeTime": "1742398577000",
+            "holders": "1803",
+            "liquidity": "15083768.447320617604364142",
+            "marketCap": "16836748.633987710899393822",
+            "price": "0.336737071706557472",
+            "tokenContractAddress": "GbbesPbaYh5uiAZSYNXTc7w9jty1rpg3P9L4JeN4LkKc",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-GbbesPbaYh5uiAZSYNXTc7w9jty1rpg3P9L4JeN4LkKc-108/type=default_90_0?v=1756801228556",
+            "tokenSymbol": "TRX",
+            "txs": "41",
+            "txsBuy": "11",
+            "txsSell": "30",
+            "uniqueTraders": "13",
+            "volume": "44546.64649089299"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.21",
+            "firstTradeTime": "1756816704000",
+            "holders": "115",
+            "liquidity": "112328.55920957834314807",
+            "marketCap": "77492.468208494937899376",
+            "price": "0.000077492666857508",
+            "tokenContractAddress": "BWMxZb5kjTFHqoBuBLpqgAxqMpwGY8jwv6HqFYABM9w2",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-BWMxZb5kjTFHqoBuBLpqgAxqMpwGY8jwv6HqFYABM9w2-108/type=default_90_0?v=1756816647453",
+            "tokenSymbol": "TAPS",
+            "txs": "722",
+            "txsBuy": "371",
+            "txsSell": "351",
+            "uniqueTraders": "103",
+            "volume": "151755.711163994205613708"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.26",
+            "firstTradeTime": "1752489191000",
+            "holders": "24193",
+            "liquidity": "994852.118358644362982639",
+            "marketCap": "7340180.457669025340876496",
+            "price": "0.007340310921537003",
+            "tokenContractAddress": "9tqjeRS1swj36Ee5C1iGiwAxjQJNGAVCzaTLwFY8bonk",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-9tqjeRS1swj36Ee5C1iGiwAxjQJNGAVCzaTLwFY8bonk-108/type=default_90_0?v=1755857244210",
+            "tokenSymbol": "Ani",
+            "txs": "271",
+            "txsBuy": "124",
+            "txsSell": "147",
+            "uniqueTraders": "58",
+            "volume": "10467.82107846434030144"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.32",
+            "firstTradeTime": "1752511812000",
+            "holders": "60955",
+            "liquidity": "28729403.329430994575424009",
+            "marketCap": "3580769520.00776265866247889",
+            "price": "0.003580807374082859",
+            "tokenContractAddress": "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn-108/type=default_90_0?v=1756752472961",
+            "tokenSymbol": "PUMP",
+            "txs": "258",
+            "txsBuy": "102",
+            "txsSell": "156",
+            "uniqueTraders": "92",
+            "volume": "79488.63379785466202671"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.4",
+            "firstTradeTime": "1735221625000",
+            "holders": "31476",
+            "liquidity": "12313130.70860638334161615",
+            "marketCap": "112270659.425022338634864188",
+            "price": "0.112453080943296085",
+            "tokenContractAddress": "CreiuhfwdWCN5mJbMJtA9bBpYQrQF2tCBuZwSPWfpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-CreiuhfwdWCN5mJbMJtA9bBpYQrQF2tCBuZwSPWfpump-108/type=default_90_0?v=1755816193056",
+            "tokenSymbol": "PYTHIA",
+            "txs": "56",
+            "txsBuy": "19",
+            "txsSell": "37",
+            "uniqueTraders": "56",
+            "volume": "19117.57055385588"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.42",
+            "firstTradeTime": "1756804372000",
+            "holders": "270",
+            "liquidity": "30070.913992866852943079",
+            "marketCap": "64294.459498080603907264",
+            "price": "0.000064294531130488",
+            "tokenContractAddress": "Dx6PwhGk3cF5f4mPdwkYbCdjcLanjyG6FEAArZjZpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-Dx6PwhGk3cF5f4mPdwkYbCdjcLanjyG6FEAArZjZpump-108/type=default_90_0?v=1756804376293",
+            "tokenSymbol": "Momo",
+            "txs": "374",
+            "txsBuy": "248",
+            "txsSell": "126",
+            "uniqueTraders": "220",
+            "volume": "35040.437204533404558263"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.43",
+            "firstTradeTime": "1745713919000",
+            "holders": "10846",
+            "liquidity": "2101462.396030390002012024",
+            "marketCap": "25842250.676096884059139112",
+            "price": "0.025847118015564947",
+            "tokenContractAddress": "Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump-108/type=default_90_0?v=1756808290961",
+            "tokenSymbol": "neet",
+            "txs": "50",
+            "txsBuy": "24",
+            "txsSell": "26",
+            "uniqueTraders": "29",
+            "volume": "18621.73282791124"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.49",
+            "firstTradeTime": "1703230923000",
+            "holders": "52786",
+            "liquidity": "5858943.200064747689369564",
+            "marketCap": "124161978.041356767015308726",
+            "price": "1.060068672600690647",
+            "tokenContractAddress": "J3NKxxXZcnNiMjKw9hYb2K4LUxgwB6t1FtPtQVsv3KFr",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-J3NKxxXZcnNiMjKw9hYb2K4LUxgwB6t1FtPtQVsv3KFr-106/type=default_90_0?v=1756745050332",
+            "tokenSymbol": "SPX",
+            "txs": "129",
+            "txsBuy": "53",
+            "txsSell": "76",
+            "uniqueTraders": "47",
+            "volume": "18196.113822388101335"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.5",
+            "firstTradeTime": "1714478191000",
+            "holders": "57550",
+            "liquidity": "3503553.575746051059036125",
+            "marketCap": "530496719.612381489082310458",
+            "price": "0.053049866687500575",
+            "tokenContractAddress": "KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/small/501-KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS-106?v=1749233998450",
+            "tokenSymbol": "KMNO",
+            "txs": "253",
+            "txsBuy": "123",
+            "txsSell": "130",
+            "uniqueTraders": "48",
+            "volume": "21196.6704031720328527"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.54",
+            "firstTradeTime": "1701965089000",
+            "holders": "93743",
+            "liquidity": "6351853.047020716817278871",
+            "marketCap": "1864508657.908564052161137277",
+            "price": "1.864509268104291059",
+            "tokenContractAddress": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL-108/type=default_90_0?v=1756766940736",
+            "tokenSymbol": "JTO",
+            "txs": "106",
+            "txsBuy": "46",
+            "txsSell": "60",
+            "uniqueTraders": "35",
+            "volume": "11471.98806288022"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.57",
+            "firstTradeTime": "1701848381000",
+            "holders": "10425",
+            "liquidity": "5206854.952460004468760647",
+            "marketCap": "90198952.749364871048601994",
+            "price": "1.520163211643151287",
+            "tokenContractAddress": "31k88G5Mq7ptbRDf3AM13HAq6wRQHXHikR8hik7wPygk",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-31k88G5Mq7ptbRDf3AM13HAq6wRQHXHikR8hik7wPygk-108/type=default_90_0?v=1756765876705",
+            "tokenSymbol": "GP",
+            "txs": "26",
+            "txsBuy": "11",
+            "txsSell": "15",
+            "uniqueTraders": "14",
+            "volume": "10725.83580580955"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.6",
+            "firstTradeTime": "1702891849000",
+            "holders": "149311",
+            "liquidity": "13804267.909578686266654869",
+            "marketCap": "236992038.376843530541570339",
+            "price": "0.241843609462384847",
+            "tokenContractAddress": "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr-108/type=default_90_0?v=1756767007492",
+            "tokenSymbol": "POPCAT",
+            "txs": "148",
+            "txsBuy": "71",
+            "txsSell": "77",
+            "uniqueTraders": "50",
+            "volume": "11711.48386228778"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.61",
+            "firstTradeTime": "1701848792000",
+            "holders": "294265",
+            "liquidity": "33329263.884225634242294454",
+            "marketCap": "1824306493.87597123406676769",
+            "price": "3.287049437952254678",
+            "tokenContractAddress": "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/small/501-4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R-96?v=1744224535655",
+            "tokenSymbol": "RAY",
+            "txs": "539",
+            "txsBuy": "273",
+            "txsSell": "266",
+            "uniqueTraders": "111",
+            "volume": "60400.3627705018318114"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.62",
+            "firstTradeTime": "1729078788000",
+            "holders": "95584",
+            "liquidity": "5803360.246745414163393397",
+            "marketCap": "207550672.411394344883919785",
+            "price": "0.02075514066089847",
+            "tokenContractAddress": "DBRiDgJAMsM95moTzJs7M9LnkGErpbv9v6CUR1DXnUu5",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/small/501-DBRiDgJAMsM95moTzJs7M9LnkGErpbv9v6CUR1DXnUu5-106?v=1749240674058",
+            "tokenSymbol": "DBR",
+            "txs": "113",
+            "txsBuy": "54",
+            "txsSell": "59",
+            "uniqueTraders": "15",
+            "volume": "17055.080317176320015"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.71",
+            "firstTradeTime": "1701848385000",
+            "holders": "975286",
+            "liquidity": "811399.879835735900498019",
+            "marketCap": "1751976800.434951808784886615",
+            "price": "0.000019909881307969",
+            "tokenContractAddress": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263-108/type=default_90_0?v=1756765646663",
+            "tokenSymbol": "Bonk",
+            "txs": "265",
+            "txsBuy": "265",
+            "txsSell": "0",
+            "uniqueTraders": "213",
+            "volume": "15084.96875361978736307"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.74",
+            "firstTradeTime": "1729231505000",
+            "holders": "162608",
+            "liquidity": "35810170.652766346474451762",
+            "marketCap": "747248769.328500552903338278",
+            "price": "0.747261461498460346",
+            "tokenContractAddress": "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump-108/type=default_90_0?v=1756781592095",
+            "tokenSymbol": "Fartcoin ",
+            "txs": "549",
+            "txsBuy": "229",
+            "txsSell": "320",
+            "uniqueTraders": "128",
+            "volume": "66827.413140211020134"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.76",
+            "firstTradeTime": "1722558985000",
+            "holders": "45425",
+            "liquidity": "8502286.136579875528469722",
+            "marketCap": "143008472.947260417584714578",
+            "price": "0.143159614762440338",
+            "tokenContractAddress": "5UUH9RTDiSpq6HKS6bp4NdU9PNJpXRXuiw6ShBTBhgH2",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/small/501-5UUH9RTDiSpq6HKS6bp4NdU9PNJpXRXuiw6ShBTBhgH2-106?v=1749237961825",
+            "tokenSymbol": "TROLL",
+            "txs": "83",
+            "txsBuy": "35",
+            "txsSell": "48",
+            "uniqueTraders": "43",
+            "volume": "54867.87791791286"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.81",
+            "firstTradeTime": "1751192437000",
+            "holders": "11155",
+            "liquidity": "1608642.143027921903636493",
+            "marketCap": "13482727.045170026304288584",
+            "price": "328.860161325617027377",
+            "tokenContractAddress": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB-108/type=default_90_0?v=1756749927607",
+            "tokenSymbol": "TSLAx",
+            "txs": "112",
+            "txsBuy": "57",
+            "txsSell": "55",
+            "uniqueTraders": "38",
+            "volume": "21528.91910247913"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-0.87",
+            "firstTradeTime": "1756718017000",
+            "holders": "407",
+            "liquidity": "35810.866178870233151972",
+            "marketCap": "75696.243046482090735767",
+            "price": "0.000075700606752127",
+            "tokenContractAddress": "9SVVzMUkyDX28awzM5tpVjbjLD3oi8GJmnn6tsrYpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-9SVVzMUkyDX28awzM5tpVjbjLD3oi8GJmnn6tsrYpump-108/type=default_90_0?v=1756718019119",
+            "tokenSymbol": "Pebble",
+            "txs": "94",
+            "txsBuy": "44",
+            "txsSell": "50",
+            "uniqueTraders": "43",
+            "volume": "10243.25665267222257715"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-1",
+            "firstTradeTime": "1754619229000",
+            "holders": "11173",
+            "liquidity": "1054473.765867328481420363",
+            "marketCap": "7556093.467775672399372311",
+            "price": "0.007556279632129639",
+            "tokenContractAddress": "7eMJmn1bYWSQEwxAX7CyngBzGNGu1cT582asKxxRpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-7eMJmn1bYWSQEwxAX7CyngBzGNGu1cT582asKxxRpump-108/type=default_90_0?v=1756481432162",
+            "tokenSymbol": "CLIPPY",
+            "txs": "271",
+            "txsBuy": "125",
+            "txsSell": "146",
+            "uniqueTraders": "66",
+            "volume": "16273.885000164280091802"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-1.01",
+            "firstTradeTime": "1737689992000",
+            "holders": "18568",
+            "liquidity": "2919307.844092568434327159",
+            "marketCap": "58142655.79440949944109751",
+            "price": "0.058150069607903893",
+            "tokenContractAddress": "Ey59PH7Z4BFU4HjyKnyMdWt5GGN76KazTAwQihoUXRnk",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-Ey59PH7Z4BFU4HjyKnyMdWt5GGN76KazTAwQihoUXRnk-108/type=default_90_0?v=1755820095834",
+            "tokenSymbol": "LAUNCHCOIN",
+            "txs": "225",
+            "txsBuy": "112",
+            "txsSell": "113",
+            "uniqueTraders": "51",
+            "volume": "25909.396403160040107"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-1.1",
+            "firstTradeTime": "1742834682000",
+            "holders": "23023",
+            "liquidity": "1696270.146705075984180152",
+            "marketCap": "13179281.388774324581150843",
+            "price": "0.013197418046766592",
+            "tokenContractAddress": "DitHyRMQiSDhn5cnKMJV2CDDt6sVct96YrECiM49pump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-DitHyRMQiSDhn5cnKMJV2CDDt6sVct96YrECiM49pump-108/type=default_90_0?v=1756733850056",
+            "tokenSymbol": "House",
+            "txs": "61",
+            "txsBuy": "39",
+            "txsSell": "22",
+            "uniqueTraders": "39",
+            "volume": "12521.11707455585051005"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-1.15",
+            "firstTradeTime": "1756677244000",
+            "holders": "4282",
+            "liquidity": "496130.868074816683066771",
+            "marketCap": "2667539.196191917194379295",
+            "price": "0.002667730535593812",
+            "tokenContractAddress": "48TqCgU8zC2H5tWshNriY2bWHDULSTSvdgL4iP1Fpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-48TqCgU8zC2H5tWshNriY2bWHDULSTSvdgL4iP1Fpump-108/type=default_90_0?v=1756677317150",
+            "tokenSymbol": "holo",
+            "txs": "171",
+            "txsBuy": "75",
+            "txsSell": "96",
+            "uniqueTraders": "102",
+            "volume": "18745.667712469031174809"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-1.27",
+            "firstTradeTime": "1746886853000",
+            "holders": "34420",
+            "liquidity": "11260169.491934699438490084",
+            "marketCap": "167290087.625995830265953066",
+            "price": "0.167442262985240444",
+            "tokenContractAddress": "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk-108/type=default_90_0?v=1755845114460",
+            "tokenSymbol": "USELESS",
+            "txs": "172",
+            "txsBuy": "68",
+            "txsSell": "104",
+            "uniqueTraders": "59",
+            "volume": "17808.633933166034474"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-1.43",
+            "firstTradeTime": "1754379336000",
+            "holders": "14613",
+            "liquidity": "2516732.530501292817960534",
+            "marketCap": "24461578.138047018165041247",
+            "price": "0.024462998608412244",
+            "tokenContractAddress": "5zCETicUCJqJ5Z3wbfFPZqtSpHPYqnggs1wX7ZRpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-5zCETicUCJqJ5Z3wbfFPZqtSpHPYqnggs1wX7ZRpump-108/type=default_90_0?v=1756687273181",
+            "tokenSymbol": "SPARK",
+            "txs": "299",
+            "txsBuy": "154",
+            "txsSell": "145",
+            "uniqueTraders": "79",
+            "volume": "84389.556859371030010312"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-2.1",
+            "firstTradeTime": "1745506318000",
+            "holders": "12086",
+            "liquidity": "3933535.672255125919287143",
+            "marketCap": "59930195.030363686046966601",
+            "price": "0.06402345574464",
+            "tokenContractAddress": "C29ebrgYjYoJPMGPnPSGY1q3mMGk4iDSqnQeQQA7moon",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-C29ebrgYjYoJPMGPnPSGY1q3mMGk4iDSqnQeQQA7moon-108/type=default_90_0?v=1756807428925",
+            "tokenSymbol": "NOBODY",
+            "txs": "188",
+            "txsBuy": "59",
+            "txsSell": "129",
+            "uniqueTraders": "32",
+            "volume": "24223.3289374815905103"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-2.19",
+            "firstTradeTime": "1751611293000",
+            "holders": "5771",
+            "liquidity": "597811.858973478296588652",
+            "marketCap": "5116626.441902262625552977",
+            "price": "0.5117849016896625",
+            "tokenContractAddress": "83kGGSggYGP2ZEEyvX54SkZR1kFn84RgGCDyptbDbonk",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-83kGGSggYGP2ZEEyvX54SkZR1kFn84RgGCDyptbDbonk-108/type=default_90_0?v=1755855055960",
+            "tokenSymbol": "旺柴",
+            "txs": "65",
+            "txsBuy": "38",
+            "txsSell": "27",
+            "uniqueTraders": "44",
+            "volume": "12660.95416320661204006"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-2.45",
+            "firstTradeTime": "1715231153000",
+            "holders": "4341",
+            "liquidity": "655556.367757539521897327",
+            "marketCap": "4487750.842648499327760551",
+            "price": "0.5010844496677946",
+            "tokenContractAddress": "7oLWGMuGbBm9uwDmffSdxLE98YChFAH1UdY5XpKYLff8",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-7oLWGMuGbBm9uwDmffSdxLE98YChFAH1UdY5XpKYLff8-106/type=default_90_0?v=1756747552994",
+            "tokenSymbol": "WOJAK",
+            "txs": "111",
+            "txsBuy": "78",
+            "txsSell": "33",
+            "uniqueTraders": "65",
+            "volume": "22739.28640933544044545"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-2.45",
+            "firstTradeTime": "1711333572000",
+            "holders": "23462",
+            "liquidity": "3145356.641734818850872981",
+            "marketCap": "26541878.023917293620312702",
+            "price": "0.026543867455616667",
+            "tokenContractAddress": "GtDZKAqvMZMnti46ZewMiXCa4oXF4bZxwQPoKzXPFxZn",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-GtDZKAqvMZMnti46ZewMiXCa4oXF4bZxwQPoKzXPFxZn-108/type=default_90_0?v=1756770194154",
+            "tokenSymbol": "nub",
+            "txs": "30",
+            "txsBuy": "13",
+            "txsSell": "17",
+            "uniqueTraders": "15",
+            "volume": "14508.10337875355"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-2.46",
+            "firstTradeTime": "1756728000000",
+            "holders": "23010",
+            "liquidity": "10296833.97978188316813947",
+            "marketCap": "80514822.620035993800511383",
+            "price": "0.228971021261937605",
+            "tokenContractAddress": "WLFinEv6ypjkczcS83FZqFpgFZYwQXutRbxGe7oC16g",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-WLFinEv6ypjkczcS83FZqFpgFZYwQXutRbxGe7oC16g-107/type=default_90_0?v=1756816967011",
+            "tokenSymbol": "WLFI",
+            "txs": "864",
+            "txsBuy": "266",
+            "txsSell": "598",
+            "uniqueTraders": "154",
+            "volume": "391738.54038637512634855"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-2.69",
+            "firstTradeTime": "1745617855000",
+            "holders": "13651",
+            "liquidity": "1241635.813449274005351253",
+            "marketCap": "9092277.01728385125494646",
+            "price": "0.009102872708143264",
+            "tokenContractAddress": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump-108/type=default_90_0?v=1755841994349",
+            "tokenSymbol": "CHILLHOUSE",
+            "txs": "25",
+            "txsBuy": "17",
+            "txsSell": "8",
+            "uniqueTraders": "16",
+            "volume": "19481.12160467637009"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-2.7",
+            "firstTradeTime": "1747141893000",
+            "holders": "12403",
+            "liquidity": "1293840.933359991871930738",
+            "marketCap": "14129110.880164326541121501",
+            "price": "0.014130889780118507",
+            "tokenContractAddress": "HtTYHz1Kf3rrQo6AqDLmss7gq5WrkWAaXn3tupUZbonk",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-HtTYHz1Kf3rrQo6AqDLmss7gq5WrkWAaXn3tupUZbonk-108/type=default_90_0?v=1756811233784",
+            "tokenSymbol": "KORI",
+            "txs": "233",
+            "txsBuy": "95",
+            "txsSell": "138",
+            "uniqueTraders": "92",
+            "volume": "40575.74616474066207482"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-3.44",
+            "firstTradeTime": "1756295122000",
+            "holders": "6632",
+            "liquidity": "516287.402115277434729202",
+            "marketCap": "3583165.429817142192045831",
+            "price": "0.003583315024744681",
+            "tokenContractAddress": "3vz82EWYv8xnc7Cm7qSgERcpMeqw92PcX8PBz88npump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-3vz82EWYv8xnc7Cm7qSgERcpMeqw92PcX8PBz88npump-108/type=default_90_0?v=1756295123756",
+            "tokenSymbol": "USDUT",
+            "txs": "122",
+            "txsBuy": "48",
+            "txsSell": "74",
+            "uniqueTraders": "72",
+            "volume": "12924.92522779911036556"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-3.5",
+            "firstTradeTime": "1756789254000",
+            "holders": "415",
+            "liquidity": "47505.885217617230776031",
+            "marketCap": "130852.710532865239185882",
+            "price": "0.000130854982052018",
+            "tokenContractAddress": "AYFwa6B2vHeKzbGEMDaQckw9BXbgSve5BBbmtodhpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-AYFwa6B2vHeKzbGEMDaQckw9BXbgSve5BBbmtodhpump-108/type=default_90_0?v=1756789256837",
+            "tokenSymbol": "Adrian",
+            "txs": "128",
+            "txsBuy": "63",
+            "txsSell": "65",
+            "uniqueTraders": "84",
+            "volume": "12562.45111815591207465"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-4.09",
+            "firstTradeTime": "1750286928000",
+            "holders": "18107",
+            "liquidity": "1263144.004142219998684378",
+            "marketCap": "9444736.549621072495087447",
+            "price": "0.009445293062751946",
+            "tokenContractAddress": "71Jvq4Epe2FCJ7JFSF7jLXdNk1Wy4Bhqd9iL6bEFELvg",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-71Jvq4Epe2FCJ7JFSF7jLXdNk1Wy4Bhqd9iL6bEFELvg-108/type=default_90_0?v=1755773268187",
+            "tokenSymbol": "GOR",
+            "txs": "165",
+            "txsBuy": "107",
+            "txsSell": "58",
+            "uniqueTraders": "43",
+            "volume": "18800.208422415130128703"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-4.5",
+            "firstTradeTime": "1756490781000",
+            "holders": "5965",
+            "liquidity": "356885.563820142810387406",
+            "marketCap": "1318623.454727214186783899",
+            "price": "0.001318698331757437",
+            "tokenContractAddress": "4JPyh4ATbE8hfcH7LqhxF3YThsECZm6htmLvMUyrbonk",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-4JPyh4ATbE8hfcH7LqhxF3YThsECZm6htmLvMUyrbonk-108/type=default_90_0?v=1756763606824",
+            "tokenSymbol": "Eagle",
+            "txs": "165",
+            "txsBuy": "91",
+            "txsSell": "74",
+            "uniqueTraders": "85",
+            "volume": "21569.36897841580255085"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-4.63",
+            "firstTradeTime": "1756805684000",
+            "holders": "3165",
+            "liquidity": "61347.543877642551777517",
+            "marketCap": "247636.112329224807801974",
+            "price": "0.000247636112329388",
+            "tokenContractAddress": "AD8UhEiEyztbceknCQ2reeAWyRxcB8F2d9yUuXUNpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-AD8UhEiEyztbceknCQ2reeAWyRxcB8F2d9yUuXUNpump-108/type=default_90_0?v=1756805686898",
+            "tokenSymbol": "FROGI",
+            "txs": "1412",
+            "txsBuy": "765",
+            "txsSell": "647",
+            "uniqueTraders": "308",
+            "volume": "25972.315008990893403758"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-5.03",
+            "firstTradeTime": "1756564230000",
+            "holders": "4920",
+            "liquidity": "516484.426491865407166872",
+            "marketCap": "1880832.02191478958343709",
+            "price": "0.001880871926740969",
+            "tokenContractAddress": "B9iPvm8YybydhvMiKAuJuygEKuzspgxdavhFNzzUpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-B9iPvm8YybydhvMiKAuJuygEKuzspgxdavhFNzzUpump-108/type=default_90_0?v=1756564233200",
+            "tokenSymbol": "EMULITES",
+            "txs": "352",
+            "txsBuy": "224",
+            "txsSell": "128",
+            "uniqueTraders": "163",
+            "volume": "50315.418761854402779749"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-5.35",
+            "firstTradeTime": "1752268905000",
+            "holders": "3610",
+            "liquidity": "439086.606281285638490144",
+            "marketCap": "3733332.427739275309307035",
+            "price": "0.003733447970943229",
+            "tokenContractAddress": "5EaYZcaKfTVdpQ2avVtJ7BNWJ1Rnj86F1dWxppawpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-5EaYZcaKfTVdpQ2avVtJ7BNWJ1Rnj86F1dWxppawpump-108/type=default_90_0?v=1755856779013",
+            "tokenSymbol": "dollo",
+            "txs": "41",
+            "txsBuy": "26",
+            "txsSell": "15",
+            "uniqueTraders": "25",
+            "volume": "20205.448063214531132447"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-5.68",
+            "firstTradeTime": "1727855513000",
+            "holders": "9024",
+            "liquidity": "505324.108266182660900249",
+            "marketCap": "2119299.095285223227765242",
+            "price": "0.0021194201573712",
+            "tokenContractAddress": "mkvXiNBpa8uiSApe5BrhWVJaT87pJFTZxRy7zFapump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-mkvXiNBpa8uiSApe5BrhWVJaT87pJFTZxRy7zFapump-108/type=default_90_0?v=1755807007444",
+            "tokenSymbol": "Nailong",
+            "txs": "69",
+            "txsBuy": "53",
+            "txsSell": "16",
+            "uniqueTraders": "35",
+            "volume": "13735.83322517981060821"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-7.18",
+            "firstTradeTime": "1756745922000",
+            "holders": "2277",
+            "liquidity": "125673.405953846301227689",
+            "marketCap": "433094.743697150096342215",
+            "price": "0.000433242457286127",
+            "tokenContractAddress": "6DEa18xxCgx2SgBTJbFdEY6PTNZMWvG2nDv47LHspump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-6DEa18xxCgx2SgBTJbFdEY6PTNZMWvG2nDv47LHspump-108/type=default_90_0?v=1756745925687",
+            "tokenSymbol": "glub",
+            "txs": "915",
+            "txsBuy": "483",
+            "txsSell": "432",
+            "uniqueTraders": "398",
+            "volume": "89242.270921917407228658"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-7.21",
+            "firstTradeTime": "1756779154000",
+            "holders": "2513",
+            "liquidity": "186284.518433526477916523",
+            "marketCap": "675616.952310451768476353",
+            "price": "0.000675622501838361",
+            "tokenContractAddress": "AtPNZ3Rwcezea16xkjkxULzCMKpSbS2rVEirVfzrnEa6",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-AtPNZ3Rwcezea16xkjkxULzCMKpSbS2rVEirVfzrnEa6-108/type=default_90_0?v=1756779155981",
+            "tokenSymbol": "GOLD",
+            "txs": "530",
+            "txsBuy": "299",
+            "txsSell": "231",
+            "uniqueTraders": "276",
+            "volume": "38496.14223413013762555"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-8.05",
+            "firstTradeTime": "1756734017000",
+            "holders": "1864",
+            "liquidity": "81784.542682646989471842",
+            "marketCap": "288276.693103112970979955",
+            "price": "0.000288305376983988",
+            "tokenContractAddress": "4CmYCPDzU22ck8hT6AiPVk2iTHg9SeYtPCXZNuonpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-4CmYCPDzU22ck8hT6AiPVk2iTHg9SeYtPCXZNuonpump-108/type=default_90_0?v=1756734020238",
+            "tokenSymbol": "amuricah",
+            "txs": "602",
+            "txsBuy": "346",
+            "txsSell": "256",
+            "uniqueTraders": "331",
+            "volume": "63409.016081975042647226"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-8.93",
+            "firstTradeTime": "1756765281000",
+            "holders": "351",
+            "liquidity": "73235.742614179186571261",
+            "marketCap": "364045.907449118020746898",
+            "price": "0.000364046772554586",
+            "tokenContractAddress": "A9ga87pYeS59BDrNn9J1c9cZYaZm32MnoBfVVX1Kbonk",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-A9ga87pYeS59BDrNn9J1c9cZYaZm32MnoBfVVX1Kbonk-108/type=default_90_0?v=1756765283532",
+            "tokenSymbol": "ODUNG",
+            "txs": "51",
+            "txsBuy": "34",
+            "txsSell": "17",
+            "uniqueTraders": "24",
+            "volume": "10736.23938131995344191"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-9.31",
+            "firstTradeTime": "1754389610000",
+            "holders": "2078",
+            "liquidity": "295868.865047378718109424",
+            "marketCap": "2485397.764263724383871199",
+            "price": "0.002485441523727923",
+            "tokenContractAddress": "5oY7mmN5yiBRF2Fq3c4fhftTEsPykHcA5X5G52tpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-5oY7mmN5yiBRF2Fq3c4fhftTEsPykHcA5X5G52tpump-108/type=default_90_0?v=1756756864831",
+            "tokenSymbol": "TANAKI",
+            "txs": "100",
+            "txsBuy": "65",
+            "txsSell": "35",
+            "uniqueTraders": "60",
+            "volume": "34529.708760932052287"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-9.96",
+            "firstTradeTime": "1756816421000",
+            "holders": "116",
+            "liquidity": "121763.082950017535606366",
+            "marketCap": "79754.762192230435318303",
+            "price": "0.000079754955713241",
+            "tokenContractAddress": "DCQS1i4tLFUW4nb74K3316A4oZjJuvMpqtGgPEVTJKEz",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-DCQS1i4tLFUW4nb74K3316A4oZjJuvMpqtGgPEVTJKEz-108/type=default_90_0?v=1756816314485",
+            "tokenSymbol": "me",
+            "txs": "654",
+            "txsBuy": "395",
+            "txsSell": "259",
+            "uniqueTraders": "98",
+            "volume": "122880.27885707160108721"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-10.87",
+            "firstTradeTime": "1756480719000",
+            "holders": "1784",
+            "liquidity": "189608.651422160472799041",
+            "marketCap": "1277767.873268989538155662",
+            "price": "0.0012777887763542",
+            "tokenContractAddress": "EmNFqmSi5DvwGjW57LJ7J5i8R6T155JrNf6GNFaupump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-EmNFqmSi5DvwGjW57LJ7J5i8R6T155JrNf6GNFaupump-108/type=default_90_0?v=1756763563015",
+            "tokenSymbol": "JELLY",
+            "txs": "168",
+            "txsBuy": "82",
+            "txsSell": "86",
+            "uniqueTraders": "86",
+            "volume": "32542.75899398449197982"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-12.81",
+            "firstTradeTime": "1756785911000",
+            "holders": "2532",
+            "liquidity": "79767.256895909643750498",
+            "marketCap": "408375.18757308446409794",
+            "price": "0.000408375492159385",
+            "tokenContractAddress": "2ubH6Na9xWxXBWfNfQYqSvqLPUXRdEdAgCUcHXCKpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-2ubH6Na9xWxXBWfNfQYqSvqLPUXRdEdAgCUcHXCKpump-108/type=default_90_0?v=1756785914910",
+            "tokenSymbol": "NOSTALGIC",
+            "txs": "450",
+            "txsBuy": "256",
+            "txsSell": "194",
+            "uniqueTraders": "260",
+            "volume": "40163.41098417165259315"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-13.03",
+            "firstTradeTime": "1756796469000",
+            "holders": "554",
+            "liquidity": "29174.962758075288045483",
+            "marketCap": "55475.546909914133751213",
+            "price": "0.000055479365786075",
+            "tokenContractAddress": "GRagLc7DcKGDXzULb25sz1RosCGcFHxgwxfMHsBpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-GRagLc7DcKGDXzULb25sz1RosCGcFHxgwxfMHsBpump-108/type=default_90_0?v=1756796472442",
+            "tokenSymbol": "Dolly",
+            "txs": "125",
+            "txsBuy": "64",
+            "txsSell": "61",
+            "uniqueTraders": "60",
+            "volume": "10937.30595484825788278"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-13.83",
+            "firstTradeTime": "1756816450000",
+            "holders": "65",
+            "liquidity": "8850.053033772716193756",
+            "marketCap": "14294.045258173",
+            "price": "0.000014294045258173",
+            "tokenContractAddress": "Cd9EPGNJyrSG9wyiQaRyXatkX2vVg44eCLAFBS6pump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-Cd9EPGNJyrSG9wyiQaRyXatkX2vVg44eCLAFBS6pump-108/type=default_90_0?v=1756816451633",
+            "tokenSymbol": "CGI DOG",
+            "txs": "256",
+            "txsBuy": "136",
+            "txsSell": "120",
+            "uniqueTraders": "89",
+            "volume": "16153.267985670552360886"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-18.82",
+            "firstTradeTime": "1756809935000",
+            "holders": "97",
+            "liquidity": "79803.957048358863262069",
+            "marketCap": "446248.621397709107502757",
+            "price": "0.00044624862139771",
+            "tokenContractAddress": "LdoYUMkHx6q66tWrRL2JC3v4pxFLmEWPiEpr8Mwpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/default-logo/token_custom_logo_default_M.png/type=default_350_0",
+            "tokenSymbol": "MOONA",
+            "txs": "32",
+            "txsBuy": "17",
+            "txsSell": "15",
+            "uniqueTraders": "23",
+            "volume": "11397.852383019803915"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-20.84",
+            "firstTradeTime": "1756816421000",
+            "holders": "47",
+            "liquidity": "7360.630200713482085332",
+            "marketCap": "10735.564277107",
+            "price": "0.000010576363657773",
+            "tokenContractAddress": "ChC664uyhaAS99tzVeD2vGX42EMKwBtSFwmBRzkJpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-ChC664uyhaAS99tzVeD2vGX42EMKwBtSFwmBRzkJpump-108/type=default_90_0?v=1756816423196",
+            "tokenSymbol": "ATH",
+            "txs": "172",
+            "txsBuy": "85",
+            "txsSell": "87",
+            "uniqueTraders": "93",
+            "volume": "19906.842808052472074143"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-24.8",
+            "firstTradeTime": "1756816912000",
+            "holders": "472",
+            "liquidity": "26954.545956648982275443",
+            "marketCap": "49848.60504948525525969",
+            "price": "0.000049848607003814",
+            "tokenContractAddress": "4wyFWsArUxww5W7UeV9eX6dyTK9Fcs7jHqdgmtTgpump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-4wyFWsArUxww5W7UeV9eX6dyTK9Fcs7jHqdgmtTgpump-108/type=default_90_0?v=1756816916092",
+            "tokenSymbol": "Froggy",
+            "txs": "3153",
+            "txsBuy": "1768",
+            "txsSell": "1385",
+            "uniqueTraders": "1019",
+            "volume": "292913.969890403630310861"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-28.26",
+            "firstTradeTime": "1756762309000",
+            "holders": "394",
+            "liquidity": "26411.512409531919753611",
+            "marketCap": "49729.906715517",
+            "price": "0.000049729906715517",
+            "tokenContractAddress": "7qjzyCpUz5LJR4TXAemmTfnTi1Dc5HSjJaeHzEZ5bonk",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-7qjzyCpUz5LJR4TXAemmTfnTi1Dc5HSjJaeHzEZ5bonk-108/type=default_90_0?v=1756764854568",
+            "tokenSymbol": "stables",
+            "txs": "297",
+            "txsBuy": "178",
+            "txsSell": "119",
+            "uniqueTraders": "179",
+            "volume": "27897.660471127695696613"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-34.02",
+            "firstTradeTime": "1756815969000",
+            "holders": "332",
+            "liquidity": "20211.113356577161234324",
+            "marketCap": "28154.26322336176601633",
+            "price": "0.000028157411373228",
+            "tokenContractAddress": "QDUjVq2v8vrim1r42JSogYTBE4mUmmozjG7yaYWbonk",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-QDUjVq2v8vrim1r42JSogYTBE4mUmmozjG7yaYWbonk-108/type=default_90_0?v=1756815970615",
+            "tokenSymbol": "Diamond",
+            "txs": "386",
+            "txsBuy": "195",
+            "txsSell": "191",
+            "uniqueTraders": "226",
+            "volume": "27539.131577861225665"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-47.57",
+            "firstTradeTime": "1756812385000",
+            "holders": "159",
+            "liquidity": "105925.098946947236923891",
+            "marketCap": "2809857749.04907474",
+            "price": "0.280985774904907474",
+            "tokenContractAddress": "DJ7zwo9saEsV8prLmNvBFRu54gBGP43NynnMvmfnSyvS",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-DJ7zwo9saEsV8prLmNvBFRu54gBGP43NynnMvmfnSyvS-108/type=default_90_0?v=1756812248721",
+            "tokenSymbol": "ELONCOIN",
+            "txs": "455",
+            "txsBuy": "342",
+            "txsSell": "113",
+            "uniqueTraders": "101",
+            "volume": "26649.377739254010002"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-52.61",
+            "firstTradeTime": "1730082694000",
+            "holders": "244",
+            "liquidity": "38860.28626545654522376",
+            "marketCap": "106503.583893530580067963",
+            "price": "0.000107055341658189",
+            "tokenContractAddress": "HNhLKtM2K2P7Acxf1xyeJVLUTdwHchBrf42QNEsppump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-HNhLKtM2K2P7Acxf1xyeJVLUTdwHchBrf42QNEsppump-108/type=default_90_0?v=1756782555307",
+            "tokenSymbol": "PS2",
+            "txs": "455",
+            "txsBuy": "406",
+            "txsSell": "49",
+            "uniqueTraders": "406",
+            "volume": "30134.509466349618252"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-62.88",
+            "firstTradeTime": "1756803271000",
+            "holders": "1079",
+            "liquidity": "27372.849941049145040546",
+            "marketCap": "49497.441666679084478244",
+            "price": "0.000049497441981376",
+            "tokenContractAddress": "2m6cXUkHEpD2KHFovxcdS9uzTKcCbMVav3Yj77mipump",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-2m6cXUkHEpD2KHFovxcdS9uzTKcCbMVav3Yj77mipump-108/type=default_90_0?v=1756803273339",
+            "tokenSymbol": "RISK",
+            "txs": "1244",
+            "txsBuy": "721",
+            "txsSell": "523",
+            "uniqueTraders": "501",
+            "volume": "75903.9784426482111411"
+        },
+        {
+            "chainIndex": "501",
+            "change": "-89.07",
+            "firstTradeTime": "1756815652000",
+            "holders": "214",
+            "liquidity": "17420.304672664309894505",
+            "marketCap": "131930065.934370751044168882",
+            "price": "0.131930065803863551",
+            "tokenContractAddress": "CSm2gkq8AYWCppbkf5EbUV1TsutjKmZzCnLtTSH4md6e",
+            "tokenLogoUrl": "https://static.oklink.com/cdn/web3/currency/token/large/501-CSm2gkq8AYWCppbkf5EbUV1TsutjKmZzCnLtTSH4md6e-108/type=default_90_0?v=1756815587054",
+            "tokenSymbol": "Copilot",
+            "txs": "1715",
+            "txsBuy": "1528",
+            "txsSell": "187",
+            "uniqueTraders": "195",
+            "volume": "65825.8872477378500025"
+        }
+    ],
+    "msg": ""
+}
+
+Wallet API
+Market API
+Token API
+API Reference
+Top Token Holder
+Top Token Holder#
+Return Top 20 holder addresses and specific token holding amount.
+
+Request URL#
+GET https://web3.okx.com/api/v6/dex/market/token/holder
+
+Request Parameters#
+Parameter	Type	Required	Description
+chainIndex	String	Yes	Unique identifier for the chain.
+e.g., 1: Ethereum.
+See more here.
+tokenContractAddress	String	Yes	Token contract address (e.g., 0x382bb369d343125bfb2117af9c149795c6c65c50)
+Response Parameters#
+Parameter	Type	Description
+holdAmount	String	Number of tokens the holder holds on the specific token
+holderWalletAddress	String	Wallet address of the token holder
+Request Example#
+shell
+curl --location --request GET 'https://web3.okx.com/api/v6/dex/market/token/holder?chainIndex=501&tokenContractAddress=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' \
+
+--header 'OK-ACCESS-KEY: 37c541a1-****-****-****-10fe7a038418' \
+--header 'OK-ACCESS-SIGN: leaV********3uw=' \
+--header 'OK-ACCESS-PASSPHRASE: 1****6' \
+--header 'OK-ACCESS-TIMESTAMP: 2023-10-18T12:21:41.274Z'
+Response Example#
+200
+{
+    "code": "0",
+    "data": [
+        {
+            "holdAmount": "570747950.108575",
+            "holderWalletAddress": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"
+        },
+        {
+            "holdAmount": "500000000.001",
+            "holderWalletAddress": "3gd3dqgtJ4jWfBfLYTX67DALFetjc5iS72sCgRhCkW2u"
+        },
+        {
+            "holdAmount": "403111293.236032",
+            "holderWalletAddress": "AVzP2GeRmqGphJsMxWoqjpUifPpCret7LqWhD8NWQK49"
+        },
+        {
+            "holdAmount": "272206237.244708",
+            "holderWalletAddress": "7VHUFJHWu2CuExkJcJrzhQPJ2oygupTWkL2A2For4BmE"
+        },
+        {
+            "holdAmount": "259027606.450607",
+            "holderWalletAddress": "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9"
+        },
+        {
+            "holdAmount": "252904995.765205",
+            "holderWalletAddress": "9d9mb8kooFfaD3SctgZtkxQypkshx6ezhbKio89ixyy2"
+        },
+        {
+            "holdAmount": "113506938.878224",
+            "holderWalletAddress": "FWznbcNXWQuHTawe9RxvQ2LdCENssh12dsznf4RiouN5"
+        },
+        {
+            "holdAmount": "101985136.043764",
+            "holderWalletAddress": "DBD8hAwLDRQkTsu6EqviaYNGKPnsAMmQonxf7AH8ZcFY"
+        },
+        {
+            "holdAmount": "73752706.890644",
+            "holderWalletAddress": "6FEVkH17P9y8Q9aCkDdPcMDjvj7SVxrTETaYEm8f51Jy"
+        },
+        {
+            "holdAmount": "72838497.992745",
+            "holderWalletAddress": "3csuXZKah5rgpb8RiwX9XfjrMxcp3u1K9mBdCwL51spj"
+        },
+        {
+            "holdAmount": "66079266.10245",
+            "holderWalletAddress": "B9spsrMK6pJicYtukaZzDyzsUQLgc3jbx5gHVwdDxb6y"
+        },
+        {
+            "holdAmount": "63824158.64382",
+            "holderWalletAddress": "7MNeJP9gi5kBY1DVzJA1kzdeCr6oscXEZW51XMnmByC7"
+        },
+        {
+            "holdAmount": "63539584.430483",
+            "holderWalletAddress": "AC5RDfQFmDS1deWZos921JfqscXdByf8BKHs5ACWjtW2"
+        },
+        {
+            "holdAmount": "55351694.338679",
+            "holderWalletAddress": "6iyaZw4aLJhmh2WXydrDw4poX1uzeu2UDfSatCwqmzPA"
+        },
+        {
+            "holdAmount": "51465340.60226",
+            "holderWalletAddress": "F6ZjiBm1WgVXzez5vxHeBDgaVPQRfLyFb7GFwXvyZVxD"
+        },
+        {
+            "holdAmount": "50916839.714253",
+            "holderWalletAddress": "9un5wqE3q4oCjyrDkwsdD48KteCJitQX5978Vh7KKxHo"
+        },
+        {
+            "holdAmount": "49730509.851315",
+            "holderWalletAddress": "4kWwg9hQri1aFVqjxayDVmjmYtjXjrf1h5TpfvvAk5Sm"
+        },
+        {
+            "holdAmount": "44593888.562",
+            "holderWalletAddress": "61yKS9bjxWdqNgAHt439DfoNfwK3uKPAJGWAsFkC5M4C"
+        },
+        {
+            "holdAmount": "39477953.030487",
+            "holderWalletAddress": "F5aW6AUHn74rwpU6wS6PT77FrXWCfKcT7jX26fpbE635"
+        },
+        {
+            "holdAmount": "36288729.399797",
+            "holderWalletAddress": "AS5MV3ear4NZPMWXbCsEz3AdbCaXEnq4ChdaWsvLgkcM"
+        }
+    ],
+    "msg": ""
+}
+
+Wallet API
+Market API
+Token API
+Error Codes
+Error Codes#
+Code	HTTP status	Message
+0	200	Succeeded
+50011	429	Rate limit reached. Please refer to API documentation and throttle requests accordingly
+50014	400	Parameter {param0} cannot be empty
+50026	500	System error. Try again later
+50103	401	Request header "OK-ACCESS-KEY" cannot be empty
+50104	401	Request header "OK-ACCESS-PASSPHRASE" cannot be empty
+50105	401	Request header "OK-ACCESS-PASSPHRASE" incorrect
+50106	401	Request header "OK-ACCESS-SIGN" cannot be empty
+50107	401	Request header "OK-ACCESS-TIMESTAMP" cannot be empty
+50111	401	Invalid OK-ACCESS-KEY
+50112	401	Invalid OK-ACCESS-TIMESTAMP
+50113	401	Invalid signature
+51000	400	Parameter {param0} error
