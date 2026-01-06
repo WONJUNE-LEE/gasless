@@ -1,9 +1,9 @@
-// src/components/dex/TokenSelector.tsx
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, X, Check, Copy, ExternalLink } from "lucide-react";
-import { TokenInfo, CHAINS, fetchTokenList } from "@/lib/api";
+// [변경 1] fetchTokenList 제거하고 okxApi 사용
+import { TokenInfo, CHAINS, okxApi } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { useDebounce } from "@/lib/utils";
 
@@ -28,11 +28,8 @@ export default function TokenSelector({
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // [수정 3] 로컬 체인 상태 관리 (UI 즉시 반영 방지)
-  // 모달이 열릴 때만 부모의 chainId로 초기화
+  // 로컬 체인 상태 관리
   const [activeChainId, setActiveChainId] = useState(selectedChainId);
-
-  // 복사 알림 상태
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -51,18 +48,24 @@ export default function TokenSelector({
     };
   }, [isOpen, selectedChainId]);
 
-  // 토큰 목록 로드 (activeChainId 기준)
+  // [변경 2] okxApi.getTokens 사용하여 토큰 목록 로드
   useEffect(() => {
     if (!isOpen) return;
 
     const loadTokens = async () => {
       setIsLoading(true);
-      const fetchedTokens = await fetchTokenList(
-        activeChainId, // 로컬 체인 ID 사용
-        debouncedSearch
-      );
-      setTokens(fetchedTokens);
-      setIsLoading(false);
+      try {
+        const fetchedTokens = await okxApi.getTokens(
+          activeChainId,
+          debouncedSearch
+        );
+        setTokens(fetchedTokens);
+      } catch (e) {
+        console.error("Failed to load tokens", e);
+        setTokens([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadTokens();
@@ -70,19 +73,17 @@ export default function TokenSelector({
 
   // 주소 복사 핸들러
   const handleCopy = (e: React.MouseEvent, address: string) => {
-    e.stopPropagation(); // 부모 클릭 방지
+    e.stopPropagation();
     navigator.clipboard.writeText(address);
     setCopiedAddress(address);
     setTimeout(() => setCopiedAddress(null), 2000);
   };
 
-  // [수정 3-2] 토큰 선택 시 체인과 토큰을 함께 업데이트
+  // 토큰 선택 시 체인과 토큰을 함께 업데이트
   const handleTokenSelect = (token: TokenInfo) => {
-    // 1. 체인이 변경되었다면 부모에게 알림
     if (activeChainId !== selectedChainId) {
       onSelectChain(activeChainId);
     }
-    // 2. 토큰 선택
     onSelect(token);
   };
 
@@ -106,7 +107,7 @@ export default function TokenSelector({
               transition={{ type: "spring", bounce: 0.3, duration: 0.5 }}
               className="w-full max-w-2xl rounded-3xl overflow-hidden pointer-events-auto flex h-[700px] max-h-[85vh] bg-[#121212] border border-white/10 shadow-2xl"
             >
-              {/* Sidebar (Networks) */}
+              {/* 사이드바 (Networks) */}
               <div className="w-[140px] md:w-[180px] border-r border-white/10 flex flex-col bg-[#0a0a0a]">
                 <div className="p-4 border-b border-white/10">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -118,7 +119,7 @@ export default function TokenSelector({
                     <button
                       key={chain.id}
                       onClick={() => {
-                        setActiveChainId(chain.id); // 로컬 상태만 변경
+                        setActiveChainId(chain.id);
                         setSearchQuery("");
                       }}
                       className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
@@ -138,7 +139,7 @@ export default function TokenSelector({
                 </div>
               </div>
 
-              {/* Main Content */}
+              {/* 메인 컨텐츠 (Token List) */}
               <div className="flex-1 flex flex-col min-w-0 bg-[#121212]">
                 <div className="p-5 border-b border-white/10 flex items-center justify-between shrink-0">
                   <h3 className="text-xl font-bold tracking-tight text-white">
@@ -209,7 +210,6 @@ export default function TokenSelector({
                               <span className="font-bold text-lg text-white truncate">
                                 {token.symbol}
                               </span>
-                              {/* [수정 4, 5] 컨트랙트 주소 표시 및 복사 */}
                               <div
                                 className="flex items-center gap-1 text-[10px] text-gray-500 bg-white/5 px-1.5 py-0.5 rounded-md hover:bg-white/10 cursor-pointer transition-colors"
                                 onClick={(e) => handleCopy(e, token.address)}

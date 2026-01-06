@@ -125,7 +125,7 @@ export async function GET(request: Request) {
   }
 }
 
-// [수정] 데이터 매핑 함수 (Volume 0 해결, Logo 적용)
+// [수정] 데이터 매핑 함수
 function mapTokenData(rawList: any[], chainId: string) {
   return rawList.map((t: any) => ({
     chainId: parseInt(chainId),
@@ -133,13 +133,11 @@ function mapTokenData(rawList: any[], chainId: string) {
     name: t.tokenName,
     symbol: t.tokenSymbol,
     decimals: parseInt(t.decimals || "18"),
-    // [수정] 제공된 문서에 따라 tokenLogoUrl 사용
     logoURI: t.tokenLogoUrl || t.logoUrl || "",
-
     price: t.price || t.unitPrice || "0",
     change24h: t.change24H || t.change || "0",
 
-    // [수정] Volume 필드 다양화: vol24h, volCcy24h, volume 등 확인
+    // [중요 수정] 볼륨 필드를 우선순위대로 찾습니다.
     volume24h: t.volume24H || t.vol24h || t.volCcy24h || t.volume || "0",
 
     liquidity: t.liquidity || "0",

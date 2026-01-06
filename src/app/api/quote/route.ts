@@ -68,24 +68,24 @@ export async function GET(request: Request) {
 
     const result = data.data[0];
 
-    // [수정 1] 실제 라우트 소스(DEX Name) 추출
-    // routerResult보다 dexRouterList 내부의 dexName이 더 정확한 경우가 많습니다.
-    let dexName = "Aggregator";
-    if (result.dexRouterList && result.dexRouterList.length > 0) {
-      // 여러 DEX를 거치는 경우 첫 번째 혹은 가장 비중 높은 DEX 표시
-      dexName = result.dexRouterList[0].dexName || result.routerResult;
-    } else if (result.routerResult) {
-      dexName = result.routerResult;
-    }
+    // 문서상 priceImpactPercentString 이지만, 경우에 따라 다른 필드로 올 수 있어 안전하게 처리
+    const priceImpact =
+      result.priceImpactPercentString ||
+      result.priceImpactPercent ||
+      result.priceImpact ||
+      "0";
 
-    // [수정 2] Price Impact 추출 (API 문서: priceImpactPercent)
-    const priceImpact = result.priceImpactPercent || result.priceImpact || "0";
+    // [수정] 라우터 이름 추출 로직 단순화
+    const dexName =
+      result.dexRouterList?.[0]?.dexName || result.router || "Aggregator";
 
     return NextResponse.json({
       dstAmount: result.toTokenAmount,
       gasCost: result.txFee || "0",
-      priceImpact: priceImpact,
+      priceImpact: priceImpact, // 수정된 변수 사용
       router: dexName,
+      // [추가] 유닛 가격 정보도 필요하면 넘겨줄 수 있음
+      tokenPrice: result.tokenUnitPrice,
     });
   } catch (error: any) {
     console.error("OKX Quote Error:", error);

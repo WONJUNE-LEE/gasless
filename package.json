@@ -11,6 +11,7 @@
   "dependencies": {
     "@uniswap/sdk-core": "^7.10.0",
     "@uniswap/v3-sdk": "^3.27.0",
+    "axios": "^1.13.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "ethers": "^6.16.0",

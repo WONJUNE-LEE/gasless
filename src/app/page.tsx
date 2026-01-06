@@ -1,6 +1,7 @@
-// src/app/page.tsx
 "use client";
 
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown,
   TrendingUp,
@@ -14,218 +15,145 @@ import {
   BarChart2,
   Layers,
 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { toWei, fromWei } from "@/lib/utils";
-import {
-  fetchTokenMarketData,
-  fetchOHLCV,
-  TokenInfo,
-  CHAINS,
-  fetchDefaultPair,
-  NATIVE_TOKEN_ADDRESS,
-} from "@/lib/api";
+
+// [변경] 통합 API 사용
+import { okxApi, CHAINS, TokenInfo, NATIVE_TOKEN_ADDRESS } from "@/lib/api";
 import NativeChart from "@/components/dex/NativeChart";
 import TokenSelector from "@/components/dex/TokenSelector";
+import { toWei, fromWei } from "@/lib/utils";
 
-// [추가] 로딩 중일 때 보여줄 임시 토큰 데이터 (Crash 방지용)
+// 로딩 중 UI 깨짐 방지용 더미 데이터
 const PLACEHOLDER_TOKEN: TokenInfo = {
   chainId: 0,
   address: NATIVE_TOKEN_ADDRESS,
   name: "Loading...",
   symbol: "---",
   decimals: 18,
-  logoURI: "",
 };
 
 export default function Home() {
-  const [chainId, setChainId] = useState(42161);
+  // --- 상태 관리 ---
+  const [chainId, setChainId] = useState(42161); // Default: Arbitrum
+  const [tokens, setTokens] = useState<TokenInfo[]>([]);
 
-  // 초기값 null (로딩 상태)
   const [tokenA, setTokenA] = useState<TokenInfo | null>(null);
   const [tokenB, setTokenB] = useState<TokenInfo | null>(null);
-  const [isParamsLoading, setIsParamsLoading] = useState(true);
+
+  // 차트 상태
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [isChartLoading, setIsChartLoading] = useState(false);
+  const [timeframe, setTimeframe] = useState("1D");
+
+  // 스왑 상태
+  const [amount, setAmount] = useState("");
+  const [quoteData, setQuoteData] = useState<any>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
+  const [orderType, setOrderType] = useState<"market" | "limit">("market"); // UI 복구
+  const [limitPrice, setLimitPrice] = useState(""); // UI 복구
 
   const [modalSource, setModalSource] = useState<
     "chart" | "pay" | "receive" | null
   >(null);
 
-  const [tokenAMarketData, setTokenAMarketData] = useState<TokenInfo | null>(
-    null
-  );
-  const [tokenBMarketData, setTokenBMarketData] = useState<TokenInfo | null>(
-    null
-  );
-
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [isChartLoading, setIsChartLoading] = useState(false);
-  const [timeframe, setTimeframe] = useState("1D");
-
-  const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
-  const [orderType, setOrderType] = useState<"market" | "limit">("market");
-  const [amount, setAmount] = useState("");
-  const [limitPrice, setLimitPrice] = useState("");
-  const [quoteData, setQuoteData] = useState<any>(null);
-  const [quoteLoading, setQuoteLoading] = useState(false);
-
-  // 1. 모달 이벤트 리스너
+  // 1. 체인 변경 시 초기화
   useEffect(() => {
-    // 스왑창에서 클릭 시 (지불 토큰 변경)
-    const handleOpenTokenSelector = () => setModalSource("pay");
+    const initChain = async () => {
+      const list = await okxApi.getTokens(chainId);
+      setTokens(list);
 
-    // [신규] 헤더 검색 클릭 시 (차트/TokenA 변경)
-    const handleOpenTokenSelectorChart = () => setModalSource("chart");
-
-    window.addEventListener("open-token-selector", handleOpenTokenSelector);
-    window.addEventListener(
-      "open-token-selector-chart",
-      handleOpenTokenSelectorChart
-    );
-
-    return () => {
-      window.removeEventListener(
-        "open-token-selector",
-        handleOpenTokenSelector
-      );
-      window.removeEventListener(
-        "open-token-selector-chart",
-        handleOpenTokenSelectorChart
-      );
+      if (list.length > 0) {
+        const defaultA =
+          list.find((t) => t.symbol === "ETH" || t.symbol === "WETH") ||
+          list[0];
+        const defaultB =
+          list.find(
+            (t) => t.symbol.includes("USD") && t.address !== defaultA.address
+          ) || list[1];
+        setTokenA(defaultA);
+        setTokenB(defaultB);
+      }
     };
-  }, []);
-
-  // 2. 체인 변경 시 기본 쌍 가져오기
-  useEffect(() => {
-    const initChainDefaults = async () => {
-      setIsParamsLoading(true); // 로딩 시작 (하지만 화면은 유지됨)
-
-      const { A, B } = await fetchDefaultPair(chainId);
-      setTokenA(A);
-      setTokenB(B);
-
-      setTokenAMarketData(null);
-      setTokenBMarketData(null);
-      setQuoteData(null);
-      setAmount("");
-
-      setIsParamsLoading(false); // 로딩 종료
-    };
-
-    initChainDefaults();
+    initChain();
   }, [chainId]);
 
-  // 3. Token A 데이터 로딩
+  // 2. 차트 로드 (API 중복 호출 제거)
   useEffect(() => {
     if (!tokenA) return;
-    const loadTokenAData = async () => {
+    const loadChart = async () => {
       setIsChartLoading(true);
-      const lowerAddr = tokenA.address.toLowerCase();
-
-      // 1. 마켓 데이터 (API)
-      let marketInfo = await fetchTokenMarketData(lowerAddr, chainId);
-
-      // 2. 차트 데이터 (API)
-      const candles = await fetchOHLCV(lowerAddr, timeframe, chainId);
-      setChartData(candles);
-
-      // [수정 6] Volume 0 문제 해결:
-      // 마켓 데이터의 볼륨이 0이거나 없으면, 최신 캔들의 볼륨을 사용
-      if (marketInfo && candles.length > 0) {
-        const lastCandleVolume = candles[candles.length - 1].volume; // fetchOHLCV에서 volume 필드 추가됨
-        const apiVolume = parseFloat(marketInfo.volume24h || "0");
-
-        // API 볼륨이 0이고 차트 볼륨이 있다면 차트 볼륨 사용 (24시간 합산 로직이 더 정확하지만, 여기선 최신 캔들/일봉 기준 단순화)
-        if (apiVolume === 0 && lastCandleVolume > 0) {
-          // TokenInfo 객체 복사 후 수정
-          marketInfo = {
-            ...marketInfo,
-            volume24h: lastCandleVolume.toString(),
-          };
-        }
-      }
-
-      setTokenAMarketData(marketInfo);
-
-      if (marketInfo && !limitPrice && marketInfo.price) {
-        setLimitPrice(marketInfo.price);
-      }
+      const candles = await okxApi.getCandles(
+        chainId,
+        tokenA.address,
+        timeframe
+      );
+      const formatted = candles.map((c: any) => ({
+        time: c.time,
+        open: parseFloat(c.open),
+        high: parseFloat(c.high),
+        low: parseFloat(c.low),
+        close: parseFloat(c.close),
+      }));
+      setChartData(formatted);
       setIsChartLoading(false);
+
+      // Limit Price 초기값 설정 (UI 복구)
+      if (tokenA.price && !limitPrice) {
+        setLimitPrice(tokenA.price);
+      }
     };
-    loadTokenAData();
+    loadChart();
   }, [tokenA, timeframe, chainId]);
 
-  // 4. Token B 데이터 로딩
+  // 3. 스왑 견적 (실시간)
   useEffect(() => {
-    if (!tokenB) return;
-    const loadTokenBData = async () => {
-      const lowerAddr = tokenB.address.toLowerCase();
-      const marketInfo = await fetchTokenMarketData(lowerAddr, chainId);
-      setTokenBMarketData(marketInfo);
-    };
-    loadTokenBData();
-  }, [tokenB, chainId]);
+    if (!tokenA || !tokenB || !amount || parseFloat(amount) <= 0) {
+      setQuoteData(null);
+      return;
+    }
+    // Limit 주문이면 견적 요청 안 함 (데모용 로직)
+    if (orderType === "limit") return;
 
-  // 5. Quote 갱신
-  useEffect(() => {
-    if (!tokenA || !tokenB) return;
-    setQuoteData(null);
-    const timer = setTimeout(() => {
-      if (orderType === "market" && amount && parseFloat(amount) > 0) {
-        fetchQuote();
-      }
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [amount, activeTab, tokenA, tokenB, orderType]);
-
-  const fetchQuote = async () => {
-    if (!tokenA || !tokenB) return;
-    setQuoteLoading(true);
-    try {
+    const fetchQuote = async () => {
+      setQuoteLoading(true);
       const fromToken = activeTab === "buy" ? tokenB : tokenA;
       const toToken = activeTab === "buy" ? tokenA : tokenB;
       const weiAmount = toWei(amount, fromToken.decimals);
 
-      const res = await fetch(
-        `/api/quote?tokenIn=${fromToken.address.toLowerCase()}&tokenOut=${toToken.address.toLowerCase()}&amount=${weiAmount}&chainId=${chainId}`
-      );
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const data = await okxApi.getQuote({
+        chainId,
+        tokenIn: fromToken.address,
+        tokenOut: toToken.address,
+        amount: weiAmount,
+      });
+
       setQuoteData(data);
-    } catch (e: any) {
-      console.error("Fetch Quote Error:", e);
-      setQuoteData(null);
-    } finally {
       setQuoteLoading(false);
-    }
-  };
+    };
 
-  // ------------------------------------------------------------------
-  // [변경] 전체 화면을 덮는 로딩 제거 -> 대신 데이터가 없으면 Placeholder 사용
-  // ------------------------------------------------------------------
+    const timer = setTimeout(fetchQuote, 500);
+    return () => clearTimeout(timer);
+  }, [amount, tokenA, tokenB, activeTab, chainId, orderType]);
 
-  // 현재 사용할 토큰 (없으면 플레이스홀더 사용)
+  // --- 렌더링 변수 ---
   const displayTokenA = tokenA || PLACEHOLDER_TOKEN;
   const displayTokenB = tokenB || PLACEHOLDER_TOKEN;
-
   const currentPayToken = activeTab === "buy" ? displayTokenB : displayTokenA;
   const currentReceiveToken =
     activeTab === "buy" ? displayTokenA : displayTokenB;
   const currentChain = CHAINS.find((c) => c.id === chainId) || CHAINS[0];
 
-  const headerPrice = tokenAMarketData?.price
-    ? parseFloat(tokenAMarketData.price)
+  const currentPrice = displayTokenA.price
+    ? parseFloat(displayTokenA.price)
     : 0;
-  const priceChange = parseFloat(tokenAMarketData?.change24h || "0");
+  const change24h = displayTokenA.change24h
+    ? parseFloat(displayTokenA.change24h)
+    : 0;
 
-  const payTokenPrice =
-    activeTab === "buy"
-      ? tokenBMarketData?.price
-        ? parseFloat(tokenBMarketData.price)
-        : 0
-      : tokenAMarketData?.price
-      ? parseFloat(tokenAMarketData.price)
-      : 0;
-
+  // Total Cost 계산 (UI 복구)
+  const payTokenPrice = currentPayToken.price
+    ? parseFloat(currentPayToken.price)
+    : 0;
   const totalCostValue = amount ? parseFloat(amount) * payTokenPrice : 0;
 
   const handleSelectToken = (token: TokenInfo) => {
@@ -235,12 +163,11 @@ export default function Home() {
     else if (modalSource === "receive")
       activeTab === "buy" ? setTokenA(token) : setTokenB(token);
     setModalSource(null);
-    setAmount("");
   };
 
   return (
     <div className="container mx-auto p-4 lg:p-8 max-w-7xl min-h-screen flex flex-col gap-6">
-      {/* 1. Header */}
+      {/* 1. Header (기존 UI 유지) */}
       <div className="flex flex-col md:flex-row justify-between items-end md:items-center px-2 z-20">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/5 backdrop-blur-md">
@@ -253,66 +180,45 @@ export default function Home() {
               {currentChain.name}
             </span>
           </div>
+
           <button
             onClick={() => setModalSource("chart")}
-            disabled={isParamsLoading} // 로딩 중 클릭 방지
-            className={`flex items-center gap-3 group outline-none ${
-              isParamsLoading ? "opacity-50" : ""
-            }`}
+            className="flex items-center gap-3 group outline-none"
           >
-            {/* 로딩 중이면 스켈레톤, 아니면 실제 데이터 */}
-            {isParamsLoading ? (
-              <div className="w-10 h-10 rounded-full bg-white/10 animate-pulse" />
+            {displayTokenA.logoURI ? (
+              <img
+                src={displayTokenA.logoURI}
+                alt={displayTokenA.symbol}
+                className="w-10 h-10 rounded-full bg-white/10 shadow-lg group-hover:scale-110 transition-transform"
+              />
             ) : (
-              displayTokenA.logoURI && (
-                <img
-                  src={displayTokenA.logoURI}
-                  alt={displayTokenA.symbol}
-                  className="w-10 h-10 rounded-full bg-white/10 shadow-lg group-hover:scale-110 transition-transform"
-                />
-              )
+              <div className="w-10 h-10 rounded-full bg-white/10 animate-pulse" />
             )}
-
             <div className="text-left">
               <h1 className="text-3xl font-black flex items-center gap-2 text-white tracking-tight">
-                {isParamsLoading ? "Loading..." : displayTokenA.symbol}
-                {!isParamsLoading && (
-                  <>
-                    <span className="text-gray-500 text-lg font-bold">
-                      / USD
-                    </span>
-                    <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" />
-                  </>
-                )}
+                {displayTokenA.symbol}
+                <span className="text-gray-500 text-lg font-bold">/ USD</span>
+                <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" />
               </h1>
             </div>
           </button>
         </div>
 
-        {/* Price Info */}
         <div className="text-right mt-4 md:mt-0">
-          <div className="text-4xl font-black tabular-nums tracking-tight text-white drop-shadow-sm">
-            {isParamsLoading ? (
-              <div className="h-10 w-48 bg-white/10 rounded animate-pulse ml-auto" />
-            ) : (
-              `$${headerPrice > 0 ? headerPrice.toLocaleString() : "---"}`
-            )}
+          <div className="text-4xl font-black tabular-nums tracking-tight text-white">
+            {currentPrice > 0 ? `$${currentPrice.toLocaleString()}` : "---"}
           </div>
           <div
             className={`text-sm font-bold flex justify-end items-center gap-1 ${
-              priceChange >= 0 ? "text-green-400" : "text-red-400"
+              change24h >= 0 ? "text-green-400" : "text-red-400"
             }`}
           >
-            {!isParamsLoading && (
-              <>
-                {priceChange >= 0 ? (
-                  <TrendingUp className="w-3 h-3" />
-                ) : (
-                  <TrendingDown className="w-3 h-3" />
-                )}
-                {Math.abs(priceChange)}% (24h)
-              </>
+            {change24h >= 0 ? (
+              <TrendingUp className="w-3 h-3" />
+            ) : (
+              <TrendingDown className="w-3 h-3" />
             )}
+            {Math.abs(change24h).toFixed(2)}% (24h)
           </div>
         </div>
       </div>
@@ -323,42 +229,28 @@ export default function Home() {
         <div className="lg:col-span-2 relative rounded-3xl overflow-hidden bg-white/5 border border-white/5 shadow-xl h-[650px] flex flex-col">
           {/* Chart Header */}
           <div className="flex justify-between items-start p-4 z-10">
-            {tokenAMarketData ? (
-              <div className="flex gap-4 text-xs font-medium text-gray-400">
-                <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
-                  <Layers className="w-3 h-3 text-white" />
-                  <span>OKX Aggregator</span>
-                </div>
-                {/* Liquidity */}
-                <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
-                  <Droplets className="w-3 h-3 text-blue-400" />
-                  <span>
-                    Liq: $
-                    {parseFloat(
-                      tokenAMarketData.liquidity || "0"
-                    ).toLocaleString()}
-                  </span>
-                </div>
-                {/* Volume */}
-                <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
-                  <BarChart2 className="w-3 h-3 text-green-400" />
-                  <span>
-                    Vol: $
-                    {parseFloat(
-                      tokenAMarketData.volume24h || "0"
-                    ).toLocaleString()}
-                  </span>
-                </div>
+            <div className="flex gap-4 text-xs font-medium text-gray-400">
+              <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
+                <Layers className="w-3 h-3 text-white" />
+                <span>OKX Aggregator</span>
               </div>
-            ) : (
-              // 마켓 데이터 로딩 중 스켈레톤
-              <div className="flex gap-4">
-                <div className="h-6 w-24 bg-white/5 rounded animate-pulse" />
-                <div className="h-6 w-24 bg-white/5 rounded animate-pulse" />
-                <div className="h-6 w-24 bg-white/5 rounded animate-pulse" />
+              <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
+                <Droplets className="w-3 h-3 text-blue-400" />
+                <span>
+                  Liq: $
+                  {parseFloat(displayTokenA.liquidity || "0").toLocaleString()}
+                </span>
               </div>
-            )}
+              <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
+                <BarChart2 className="w-3 h-3 text-green-400" />
+                <span>
+                  Vol: $
+                  {parseFloat(displayTokenA.volume24h || "0").toLocaleString()}
+                </span>
+              </div>
+            </div>
 
+            {/* Timeframes */}
             <div className="flex bg-black/30 rounded-lg p-1 border border-white/5 backdrop-blur-md">
               {["1H", "4H", "1D", "1W"].map((tf) => (
                 <button
@@ -376,42 +268,26 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Chart Body */}
+          {/* Chart Body - [수정] 타입 에러 원인 제거 (props 단순화) */}
           <div className="flex-1 relative w-full">
-            {isChartLoading || isParamsLoading ? (
-              <div className="absolute inset-0 flex items-center justify-center text-gray-500 font-medium bg-black/20 backdrop-blur-sm z-10">
+            {isChartLoading ? (
+              <div className="absolute inset-0 flex items-center justify-center text-gray-500 bg-black/20 backdrop-blur-sm z-10">
                 <Loader2 className="animate-spin mr-2 w-5 h-5" /> Loading
                 Chart...
               </div>
-            ) : chartData.length > 0 ? (
+            ) : (
               <div className="w-full h-full pb-2">
                 <NativeChart
                   data={chartData}
                   colors={{ textColor: "#737373" }}
-                  activeTimeframe={timeframe}
-                  onTimeframeChange={setTimeframe}
                 />
-              </div>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-gray-600 flex-col gap-2">
-                <span>No Chart Data Available</span>
-                {chainId === 143 && (
-                  <span className="text-xs text-gray-500">
-                    Monad chart not yet supported by OKX
-                  </span>
-                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* [Right] Swap Panel */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-1 glass-panel rounded-3xl p-6 flex flex-col relative overflow-hidden h-fit min-h-[600px]"
-        >
-          {/* Background Glow */}
+        {/* [Right] Swap Panel (UI 완전 복구) */}
+        <motion.div className="lg:col-span-1 glass-panel rounded-3xl p-6 flex flex-col relative overflow-hidden h-fit min-h-[600px]">
           <div
             className={`absolute -top-32 -right-32 w-64 h-64 rounded-full blur-[100px] opacity-15 pointer-events-none transition-colors duration-500 ${
               activeTab === "buy" ? "bg-green-500" : "bg-red-500"
@@ -438,7 +314,6 @@ export default function Home() {
                         ? "bg-green-500/20 border border-green-500/30"
                         : "bg-red-500/20 border border-red-500/30"
                     }`}
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
                 <span className="relative z-20">{mode}</span>
@@ -448,7 +323,7 @@ export default function Home() {
 
           {/* Inputs */}
           <div className="flex flex-col gap-2 relative z-10">
-            {/* YOU PAY */}
+            {/* YOU PAY (Limit/Market 탭 복구) */}
             <motion.div
               layout
               className={`input-well p-4 flex flex-col relative transition-colors hover:border-white/10 min-h-[170px] ${
@@ -484,6 +359,7 @@ export default function Home() {
                   </span>
                 </div>
               </div>
+
               <div className="flex justify-between items-center gap-2">
                 <input
                   type="number"
@@ -491,26 +367,20 @@ export default function Home() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="bg-transparent text-3xl font-bold text-white outline-none w-full placeholder-gray-700 tabular-nums"
-                  disabled={isParamsLoading}
                 />
                 <button
                   onClick={() => setModalSource("pay")}
-                  className="bg-white/5 hover:bg-white/10 border border-white/5 px-3 py-1.5 rounded-full flex items-center gap-2 transition-all shrink-0 active:scale-95"
-                  disabled={isParamsLoading}
+                  className="bg-white/5 hover:bg-white/10 border border-white/5 px-3 py-1.5 rounded-full flex items-center gap-2 transition-all shrink-0"
                 >
-                  {isParamsLoading ? (
-                    <div className="w-5 h-5 bg-white/20 rounded-full animate-pulse" />
-                  ) : (
-                    currentPayToken.logoURI && (
-                      <img
-                        src={currentPayToken.logoURI}
-                        alt={currentPayToken.symbol}
-                        className="w-5 h-5 rounded-full"
-                      />
-                    )
+                  {currentPayToken.logoURI && (
+                    <img
+                      src={currentPayToken.logoURI}
+                      alt=""
+                      className="w-5 h-5 rounded-full"
+                    />
                   )}
                   <span className="font-bold text-sm text-white">
-                    {isParamsLoading ? "..." : currentPayToken.symbol}
+                    {currentPayToken.symbol}
                   </span>
                   <ChevronDown className="w-3 h-3 opacity-50 text-white" />
                 </button>
@@ -530,7 +400,7 @@ export default function Home() {
                       </span>
                       <input
                         type="number"
-                        placeholder={tokenAMarketData?.price || "0"}
+                        placeholder={displayTokenA.price || "0"}
                         value={limitPrice}
                         onChange={(e) => setLimitPrice(e.target.value)}
                         className="bg-transparent text-right text-sm font-bold outline-none text-white w-1/2"
@@ -541,7 +411,7 @@ export default function Home() {
               </AnimatePresence>
             </motion.div>
 
-            {/* Swap Arrow */}
+            {/* Arrow */}
             <div className="flex justify-center -my-5 relative z-20 pointer-events-none">
               <div className="bg-[#1a1c23] border border-white/10 p-2 rounded-xl text-gray-400 shadow-xl">
                 <ArrowRightLeft className="w-4 h-4 rotate-90 text-white" />
@@ -569,22 +439,17 @@ export default function Home() {
                 </div>
                 <button
                   onClick={() => setModalSource("receive")}
-                  className="bg-white/5 hover:bg-white/10 border border-white/5 px-3 py-1.5 rounded-full flex items-center gap-2 transition-all shrink-0 active:scale-95"
-                  disabled={isParamsLoading}
+                  className="bg-white/5 hover:bg-white/10 border border-white/5 px-3 py-1.5 rounded-full flex items-center gap-2 transition-all shrink-0"
                 >
-                  {isParamsLoading ? (
-                    <div className="w-5 h-5 bg-white/20 rounded-full animate-pulse" />
-                  ) : (
-                    currentReceiveToken.logoURI && (
-                      <img
-                        src={currentReceiveToken.logoURI}
-                        alt={currentReceiveToken.symbol}
-                        className="w-5 h-5 rounded-full"
-                      />
-                    )
+                  {currentReceiveToken.logoURI && (
+                    <img
+                      src={currentReceiveToken.logoURI}
+                      alt=""
+                      className="w-5 h-5 rounded-full"
+                    />
                   )}
                   <span className="font-bold text-sm text-white">
-                    {isParamsLoading ? "..." : currentReceiveToken.symbol}
+                    {currentReceiveToken.symbol}
                   </span>
                   <ChevronDown className="w-3 h-3 opacity-50 text-white" />
                 </button>
@@ -592,14 +457,14 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Info Section */}
+          {/* Info Section (상세 정보 복구) */}
           <div className="mt-6 flex flex-col gap-4 relative z-10 flex-1 justify-end border-t border-white/5 pt-4">
             <div className="px-2 space-y-3">
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
                 <span>Rate</span>
                 <span className="text-gray-300">
                   1 {currentPayToken.symbol} ≈{" "}
-                  {quoteData && amount && parseFloat(amount) > 0
+                  {quoteData && amount
                     ? (
                         parseFloat(
                           fromWei(
@@ -607,54 +472,39 @@ export default function Home() {
                             currentReceiveToken.decimals
                           )
                         ) / parseFloat(amount)
-                      ).toLocaleString(undefined, { maximumFractionDigits: 4 })
+                      ).toLocaleString()
                     : "-"}{" "}
                   {currentReceiveToken.symbol}
                 </span>
               </div>
-
-              <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
-                <span className="flex items-center gap-1">
-                  Route <Info className="w-3 h-3" />
-                </span>
-                <span className="text-gray-300 flex items-center gap-1">
-                  {quoteData?.router ? (
-                    <span className="text-[10px] bg-white/10 border border-white/5 px-1.5 py-0.5 rounded text-blue-300 font-bold">
-                      Via {quoteData.router}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-gray-600 flex items-center gap-1">
-                      Finding best route...
-                    </span>
-                  )}
-                </span>
-              </div>
-
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
                 <span>Price Impact</span>
                 <span
                   className={`${
-                    quoteData ? "text-green-400" : "text-gray-500"
+                    parseFloat(quoteData?.priceImpact || "0") > 5
+                      ? "text-red-400"
+                      : "text-green-400"
                   }`}
                 >
-                  {quoteData?.priceImpact ? `${quoteData.priceImpact}%` : "-"}
+                  {quoteData?.priceImpact
+                    ? `${parseFloat(quoteData.priceImpact).toFixed(2)}%`
+                    : "-"}
                 </span>
               </div>
-
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
                 <span>Max Slippage</span>
                 <button className="flex items-center gap-1 bg-white/5 px-1.5 py-0.5 rounded text-gray-300 hover:text-white transition-colors">
                   Auto (0.5%) <Settings className="w-3 h-3" />
                 </button>
               </div>
-
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
                 <span>Network Cost</span>
                 <span className="text-blue-400 flex items-center gap-1 font-bold">
-                  <Sparkles className="w-3 h-3" /> Free (Gasless)
+                  <Sparkles className="w-3 h-3" /> Gasless
                 </span>
               </div>
 
+              {/* Total Cost 복구 */}
               <div className="flex justify-between items-center pt-3 mt-1 border-t border-white/5">
                 <span className="text-sm font-bold text-gray-400">
                   Total Cost
@@ -678,28 +528,26 @@ export default function Home() {
                 activeTab === "buy" ? "btn-buy" : "btn-sell"
               }`}
             >
-              {activeTab === "buy" ? "BUY" : "SELL"}{" "}
-              {isParamsLoading ? "..." : displayTokenA.symbol}
+              {activeTab === "buy" ? "BUY" : "SELL"} {displayTokenA.symbol}
             </button>
           </div>
         </motion.div>
-
-        {/* Token Selector Modal */}
-        <TokenSelector
-          isOpen={!!modalSource}
-          onClose={() => setModalSource(null)}
-          onSelect={handleSelectToken}
-          selectedToken={
-            modalSource === "chart"
-              ? displayTokenA
-              : modalSource === "pay"
-              ? currentPayToken
-              : currentReceiveToken
-          }
-          selectedChainId={chainId}
-          onSelectChain={setChainId}
-        />
       </div>
+
+      <TokenSelector
+        isOpen={!!modalSource}
+        onClose={() => setModalSource(null)}
+        onSelect={handleSelectToken}
+        selectedToken={
+          modalSource === "chart"
+            ? displayTokenA
+            : modalSource === "pay"
+            ? currentPayToken
+            : currentReceiveToken
+        }
+        selectedChainId={chainId}
+        onSelectChain={setChainId}
+      />
     </div>
   );
 }
