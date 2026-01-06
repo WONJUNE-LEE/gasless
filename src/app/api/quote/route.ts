@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { createHmac } from "crypto";
 
-const OKX_API_URL = "https://www.okx.com";
+const OKX_API_URL = "https://web3.okx.com";
 
 function generateOkxHeaders(
   method: string,
@@ -36,20 +36,21 @@ export async function GET(request: Request) {
   const tokenIn = searchParams.get("tokenIn");
   const tokenOut = searchParams.get("tokenOut");
   const amount = searchParams.get("amount");
-  const chainId = searchParams.get("chainId") || "42161";
+  const chainId = searchParams.get("chainId") || "1";
+  const slippage = searchParams.get("slippage") || "0.005"; // 기본 0.5%
 
   if (!tokenIn || !tokenOut || !amount) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
 
   try {
-    const endpoint = "/api/v5/dex/aggregator/quote";
+    const endpoint = "/api/v6/dex/aggregator/quote";
     const queryParams = new URLSearchParams({
-      chainIndex: chainId, // [확인] API 문서상 chainIndex
+      chainIndex: chainId,
       amount: amount,
       fromTokenAddress: tokenIn,
       toTokenAddress: tokenOut,
-      options: "2",
+      slippage: slippage, // [추가] OKX API에 슬리피지 전달
     });
 
     const queryString = "?" + queryParams.toString();
@@ -67,25 +68,18 @@ export async function GET(request: Request) {
     }
 
     const result = data.data[0];
-
-    // 문서상 priceImpactPercentString 이지만, 경우에 따라 다른 필드로 올 수 있어 안전하게 처리
-    const priceImpact =
-      result.priceImpactPercentString ||
-      result.priceImpactPercent ||
-      result.priceImpact ||
-      "0";
-
-    // [수정] 라우터 이름 추출 로직 단순화
+    const priceImpact = result.priceImpactPercent || "0";
     const dexName =
-      result.dexRouterList?.[0]?.dexName || result.router || "Aggregator";
+      result.dexRouterList?.[0]?.dexProtocol?.dexName ||
+      result.router ||
+      "Aggregator";
 
     return NextResponse.json({
       dstAmount: result.toTokenAmount,
-      gasCost: result.txFee || "0",
-      priceImpact: priceImpact, // 수정된 변수 사용
+      gasCost: result.tradeFee || "0",
+      priceImpact: priceImpact,
       router: dexName,
-      // [추가] 유닛 가격 정보도 필요하면 넘겨줄 수 있음
-      tokenPrice: result.tokenUnitPrice,
+      tokenPrice: result.toToken?.tokenUnitPrice,
     });
   } catch (error: any) {
     console.error("OKX Quote Error:", error);

@@ -1,11 +1,19 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Check, Copy, ExternalLink } from "lucide-react";
-// [변경 1] fetchTokenList 제거하고 okxApi 사용
+import { Search, X, Check, Copy, Star } from "lucide-react";
 import { TokenInfo, CHAINS, okxApi } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { useDebounce } from "@/lib/utils";
+
+// [설정] 빠른 접근 토큰 목록 (구조 예시, 실제 데이터로 교체 필요)
+// address는 해당 체인의 실제 주소여야 작동합니다.
+const QUICK_TOKENS = [
+  { symbol: "ETH", name: "Ethereum", isNative: true },
+  { symbol: "USDT", name: "Tether USD" },
+  { symbol: "USDC", name: "USD Coin" },
+  { symbol: "WBTC", name: "Wrapped BTC" },
+];
 
 interface Props {
   isOpen: boolean;
@@ -27,14 +35,12 @@ export default function TokenSelector({
   const [searchQuery, setSearchQuery] = useState("");
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  // 로컬 체인 상태 관리
   const [activeChainId, setActiveChainId] = useState(selectedChainId);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  // 모달 열릴 때 초기화
+  // 모달 초기화
   useEffect(() => {
     if (isOpen) {
       setActiveChainId(selectedChainId);
@@ -48,7 +54,7 @@ export default function TokenSelector({
     };
   }, [isOpen, selectedChainId]);
 
-  // [변경 2] okxApi.getTokens 사용하여 토큰 목록 로드
+  // 토큰 목록 로드
   useEffect(() => {
     if (!isOpen) return;
 
@@ -71,7 +77,6 @@ export default function TokenSelector({
     loadTokens();
   }, [activeChainId, debouncedSearch, isOpen]);
 
-  // 주소 복사 핸들러
   const handleCopy = (e: React.MouseEvent, address: string) => {
     e.stopPropagation();
     navigator.clipboard.writeText(address);
@@ -79,12 +84,20 @@ export default function TokenSelector({
     setTimeout(() => setCopiedAddress(null), 2000);
   };
 
-  // 토큰 선택 시 체인과 토큰을 함께 업데이트
   const handleTokenSelect = (token: TokenInfo) => {
-    if (activeChainId !== selectedChainId) {
-      onSelectChain(activeChainId);
-    }
     onSelect(token);
+    onClose();
+  };
+
+  // Quick Token 클릭 핸들러 (현재 로드된 목록에서 찾아서 선택)
+  const handleQuickSelect = (symbol: string) => {
+    const target = tokens.find((t) => t.symbol === symbol);
+    if (target) {
+      handleTokenSelect(target);
+    } else {
+      // 목록에 없을 경우 검색어로 입력해줌
+      setSearchQuery(symbol);
+    }
   };
 
   return (
@@ -104,10 +117,9 @@ export default function TokenSelector({
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ type: "spring", bounce: 0.3, duration: 0.5 }}
               className="w-full max-w-2xl rounded-3xl overflow-hidden pointer-events-auto flex h-[700px] max-h-[85vh] bg-[#121212] border border-white/10 shadow-2xl"
             >
-              {/* 사이드바 (Networks) */}
+              {/* Networks Sidebar */}
               <div className="w-[140px] md:w-[180px] border-r border-white/10 flex flex-col bg-[#0a0a0a]">
                 <div className="p-4 border-b border-white/10">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -139,7 +151,7 @@ export default function TokenSelector({
                 </div>
               </div>
 
-              {/* 메인 컨텐츠 (Token List) */}
+              {/* Main Token List */}
               <div className="flex-1 flex flex-col min-w-0 bg-[#121212]">
                 <div className="p-5 border-b border-white/10 flex items-center justify-between shrink-0">
                   <h3 className="text-xl font-bold tracking-tight text-white">
@@ -153,7 +165,7 @@ export default function TokenSelector({
                   </button>
                 </div>
 
-                <div className="p-4 pb-2 shrink-0">
+                <div className="p-4 pb-2 shrink-0 space-y-4">
                   <div className="relative group">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                     <input
@@ -165,6 +177,22 @@ export default function TokenSelector({
                       autoFocus
                     />
                   </div>
+
+                  {/* [신규] Quick Access Section */}
+                  {!searchQuery && (
+                    <div className="flex flex-wrap gap-2">
+                      {QUICK_TOKENS.map((qt) => (
+                        <button
+                          key={qt.symbol}
+                          onClick={() => handleQuickSelect(qt.symbol)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 transition-colors text-xs font-bold text-gray-300 hover:text-white"
+                        >
+                          <Star className="w-3 h-3 text-yellow-500/80 fill-yellow-500/20" />
+                          {qt.symbol}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
@@ -183,7 +211,8 @@ export default function TokenSelector({
                         key={`${token.chainId}-${token.address}`}
                         onClick={() => handleTokenSelect(token)}
                         className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all group ${
-                          selectedToken?.address === token.address
+                          selectedToken?.address === token.address &&
+                          selectedToken?.chainId === token.chainId
                             ? "bg-blue-500/10 border border-blue-500/20"
                             : "hover:bg-white/5 border border-transparent"
                         }`}
@@ -194,36 +223,22 @@ export default function TokenSelector({
                               src={token.logoURI}
                               alt={token.symbol}
                               className="w-10 h-10 rounded-full bg-white/10 shrink-0"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display =
-                                  "none";
-                              }}
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center text-sm font-bold shrink-0 text-white">
+                            <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-sm font-bold text-white shrink-0">
                               {token.symbol[0]}
                             </div>
                           )}
-
                           <div className="text-left min-w-0 flex flex-col gap-0.5">
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-lg text-white truncate">
                                 {token.symbol}
                               </span>
-                              <div
-                                className="flex items-center gap-1 text-[10px] text-gray-500 bg-white/5 px-1.5 py-0.5 rounded-md hover:bg-white/10 cursor-pointer transition-colors"
-                                onClick={(e) => handleCopy(e, token.address)}
-                              >
-                                <span>
-                                  {token.address.slice(0, 4)}...
-                                  {token.address.slice(-4)}
+                              {token.isNative && (
+                                <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1 rounded font-bold">
+                                  NATIVE
                                 </span>
-                                {copiedAddress === token.address ? (
-                                  <Check className="w-3 h-3 text-green-400" />
-                                ) : (
-                                  <Copy className="w-3 h-3" />
-                                )}
-                              </div>
+                              )}
                             </div>
                             <div className="text-sm text-gray-500 font-medium truncate">
                               {token.name}

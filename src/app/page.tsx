@@ -6,23 +6,20 @@ import {
   ChevronDown,
   TrendingUp,
   TrendingDown,
-  Info,
+  Settings,
   ArrowRightLeft,
   Loader2,
   Sparkles,
-  Settings,
-  Droplets,
-  BarChart2,
   Layers,
+  BarChart2,
+  Droplets,
 } from "lucide-react";
 
-// [변경] 통합 API 사용
 import { okxApi, CHAINS, TokenInfo, NATIVE_TOKEN_ADDRESS } from "@/lib/api";
 import NativeChart from "@/components/dex/NativeChart";
 import TokenSelector from "@/components/dex/TokenSelector";
 import { toWei, fromWei } from "@/lib/utils";
 
-// 로딩 중 UI 깨짐 방지용 더미 데이터
 const PLACEHOLDER_TOKEN: TokenInfo = {
   chainId: 0,
   address: NATIVE_TOKEN_ADDRESS,
@@ -31,53 +28,83 @@ const PLACEHOLDER_TOKEN: TokenInfo = {
   decimals: 18,
 };
 
-export default function Home() {
-  // --- 상태 관리 ---
-  const [chainId, setChainId] = useState(42161); // Default: Arbitrum
-  const [tokens, setTokens] = useState<TokenInfo[]>([]);
+const SLIPPAGE_OPTIONS = [
+  { label: "Auto", value: "auto" },
+  { label: "0.1%", value: "0.001" },
+  { label: "0.5%", value: "0.005" },
+  { label: "1.0%", value: "0.01" },
+];
 
+export default function Home() {
+  const [chainId, setChainId] = useState(42161);
+  const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [tokenA, setTokenA] = useState<TokenInfo | null>(null);
   const [tokenB, setTokenB] = useState<TokenInfo | null>(null);
 
-  // 차트 상태
   const [chartData, setChartData] = useState<any[]>([]);
   const [isChartLoading, setIsChartLoading] = useState(false);
   const [timeframe, setTimeframe] = useState("1D");
 
-  // 스왑 상태
   const [amount, setAmount] = useState("");
   const [quoteData, setQuoteData] = useState<any>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
-  const [orderType, setOrderType] = useState<"market" | "limit">("market"); // UI 복구
-  const [limitPrice, setLimitPrice] = useState(""); // UI 복구
+  const [orderType, setOrderType] = useState<"market" | "limit">("market");
+  const [limitPrice, setLimitPrice] = useState("");
+
+  const [slippage, setSlippage] = useState("auto");
+  const [showSlippage, setShowSlippage] = useState(false);
 
   const [modalSource, setModalSource] = useState<
     "chart" | "pay" | "receive" | null
   >(null);
 
-  // 1. 체인 변경 시 초기화
+  // [수정 1] 헤더 검색 시 'chart' 모드(메인 토큰 변경)로 오픈
+  useEffect(() => {
+    const handleOpenTokenSelector = () => setModalSource("chart");
+    window.addEventListener("open-token-selector", handleOpenTokenSelector);
+    return () => {
+      window.removeEventListener(
+        "open-token-selector",
+        handleOpenTokenSelector
+      );
+    };
+  }, []);
+
+  // 1. 체인 초기화 로직
   useEffect(() => {
     const initChain = async () => {
       const list = await okxApi.getTokens(chainId);
       setTokens(list);
 
       if (list.length > 0) {
-        const defaultA =
-          list.find((t) => t.symbol === "ETH" || t.symbol === "WETH") ||
-          list[0];
-        const defaultB =
-          list.find(
-            (t) => t.symbol.includes("USD") && t.address !== defaultA.address
-          ) || list[1];
-        setTokenA(defaultA);
-        setTokenB(defaultB);
+        let nextA = tokenA;
+        // tokenA가 없거나 체인이 다르면 기본값 설정
+        if (!nextA || nextA.chainId !== chainId) {
+          nextA =
+            list.find(
+              (t) => t.isNative || t.symbol === "ETH" || t.symbol === "WETH"
+            ) || list[0];
+        }
+
+        let nextB = tokenB;
+        // tokenB가 없거나 체인이 다르면 기본값 설정
+        if (!nextB || nextB.chainId !== chainId) {
+          nextB =
+            list.find(
+              (t) => t.symbol.includes("USD") && t.address !== nextA?.address
+            ) || list[1];
+        }
+
+        setTokenA(nextA);
+        setTokenB(nextB);
       }
     };
     initChain();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chainId]);
 
-  // 2. 차트 로드 (API 중복 호출 제거)
+  // 2. 차트 로드
   useEffect(() => {
     if (!tokenA) return;
     const loadChart = async () => {
@@ -93,11 +120,11 @@ export default function Home() {
         high: parseFloat(c.high),
         low: parseFloat(c.low),
         close: parseFloat(c.close),
+        value: c.volUsd,
       }));
       setChartData(formatted);
       setIsChartLoading(false);
 
-      // Limit Price 초기값 설정 (UI 복구)
       if (tokenA.price && !limitPrice) {
         setLimitPrice(tokenA.price);
       }
@@ -105,26 +132,32 @@ export default function Home() {
     loadChart();
   }, [tokenA, timeframe, chainId]);
 
-  // 3. 스왑 견적 (실시간)
+  // 3. 스왑 견적 요청
   useEffect(() => {
     if (!tokenA || !tokenB || !amount || parseFloat(amount) <= 0) {
       setQuoteData(null);
       return;
     }
-    // Limit 주문이면 견적 요청 안 함 (데모용 로직)
     if (orderType === "limit") return;
+
+    // [수정 2] 토큰 체인 ID 불일치 시(체인 변경 직후 등) 요청 방지
+    if (tokenA.chainId !== chainId || tokenB.chainId !== chainId) {
+      return;
+    }
 
     const fetchQuote = async () => {
       setQuoteLoading(true);
       const fromToken = activeTab === "buy" ? tokenB : tokenA;
       const toToken = activeTab === "buy" ? tokenA : tokenB;
       const weiAmount = toWei(amount, fromToken.decimals);
+      const targetSlippage = slippage === "auto" ? "0.005" : slippage;
 
       const data = await okxApi.getQuote({
         chainId,
         tokenIn: fromToken.address,
         tokenOut: toToken.address,
         amount: weiAmount,
+        slippage: targetSlippage,
       });
 
       setQuoteData(data);
@@ -133,9 +166,9 @@ export default function Home() {
 
     const timer = setTimeout(fetchQuote, 500);
     return () => clearTimeout(timer);
-  }, [amount, tokenA, tokenB, activeTab, chainId, orderType]);
+  }, [amount, tokenA, tokenB, activeTab, chainId, orderType, slippage]);
 
-  // --- 렌더링 변수 ---
+  // 렌더링용 변수
   const displayTokenA = tokenA || PLACEHOLDER_TOKEN;
   const displayTokenB = tokenB || PLACEHOLDER_TOKEN;
   const currentPayToken = activeTab === "buy" ? displayTokenB : displayTokenA;
@@ -149,25 +182,31 @@ export default function Home() {
   const change24h = displayTokenA.change24h
     ? parseFloat(displayTokenA.change24h)
     : 0;
-
-  // Total Cost 계산 (UI 복구)
   const payTokenPrice = currentPayToken.price
     ? parseFloat(currentPayToken.price)
     : 0;
   const totalCostValue = amount ? parseFloat(amount) * payTokenPrice : 0;
 
+  // 토큰 선택 핸들러
   const handleSelectToken = (token: TokenInfo) => {
-    if (modalSource === "chart") setTokenA(token);
-    else if (modalSource === "pay")
+    // 1. 체인이 다르면 체인 변경
+    if (token.chainId !== chainId) {
+      setChainId(token.chainId);
+    }
+    // 2. 모달 소스에 따라 토큰 업데이트
+    if (modalSource === "chart") {
+      setTokenA(token); // 메인 토큰 변경 (헤더 검색 등)
+    } else if (modalSource === "pay") {
       activeTab === "buy" ? setTokenB(token) : setTokenA(token);
-    else if (modalSource === "receive")
+    } else if (modalSource === "receive") {
       activeTab === "buy" ? setTokenA(token) : setTokenB(token);
+    }
     setModalSource(null);
   };
 
   return (
     <div className="container mx-auto p-4 lg:p-8 max-w-7xl min-h-screen flex flex-col gap-6">
-      {/* 1. Header (기존 UI 유지) */}
+      {/* 1. Header (Current Chain & Chart Token) */}
       <div className="flex flex-col md:flex-row justify-between items-end md:items-center px-2 z-20">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/5 backdrop-blur-md">
@@ -180,7 +219,6 @@ export default function Home() {
               {currentChain.name}
             </span>
           </div>
-
           <button
             onClick={() => setModalSource("chart")}
             className="flex items-center gap-3 group outline-none"
@@ -227,7 +265,6 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* [Left] Chart Area */}
         <div className="lg:col-span-2 relative rounded-3xl overflow-hidden bg-white/5 border border-white/5 shadow-xl h-[650px] flex flex-col">
-          {/* Chart Header */}
           <div className="flex justify-between items-start p-4 z-10">
             <div className="flex gap-4 text-xs font-medium text-gray-400">
               <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
@@ -250,7 +287,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Timeframes */}
             <div className="flex bg-black/30 rounded-lg p-1 border border-white/5 backdrop-blur-md">
               {["1H", "4H", "1D", "1W"].map((tf) => (
                 <button
@@ -268,7 +304,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Chart Body - [수정] 타입 에러 원인 제거 (props 단순화) */}
           <div className="flex-1 relative w-full">
             {isChartLoading ? (
               <div className="absolute inset-0 flex items-center justify-center text-gray-500 bg-black/20 backdrop-blur-sm z-10">
@@ -286,7 +321,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* [Right] Swap Panel (UI 완전 복구) */}
+        {/* [Right] Swap Panel */}
         <motion.div className="lg:col-span-1 glass-panel rounded-3xl p-6 flex flex-col relative overflow-hidden h-fit min-h-[600px]">
           <div
             className={`absolute -top-32 -right-32 w-64 h-64 rounded-full blur-[100px] opacity-15 pointer-events-none transition-colors duration-500 ${
@@ -294,47 +329,71 @@ export default function Home() {
             }`}
           />
 
-          {/* Tabs */}
-          <div className="flex bg-black/20 p-1 rounded-xl mb-6 relative border border-white/5 h-12 shrink-0">
-            {["buy", "sell"].map((mode) => (
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex bg-black/20 p-1 rounded-xl border border-white/5 h-10">
+              {["buy", "sell"].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setActiveTab(mode as any)}
+                  className={`px-6 text-sm font-black uppercase rounded-lg transition-all ${
+                    activeTab === mode
+                      ? "bg-white/10 text-white shadow-sm"
+                      : "text-gray-500 hover:text-gray-300"
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative">
               <button
-                key={mode}
-                onClick={() => setActiveTab(mode as any)}
-                className={`flex-1 relative z-10 text-sm font-black uppercase transition-colors duration-200 ${
-                  activeTab === mode
-                    ? "text-white"
-                    : "text-gray-500 hover:text-gray-300"
-                }`}
+                onClick={() => setShowSlippage(!showSlippage)}
+                className="p-2 rounded-lg bg-black/20 border border-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
               >
-                {activeTab === mode && (
-                  <motion.div
-                    layoutId="active-tab-bg"
-                    className={`absolute inset-0 rounded-lg ${
-                      mode === "buy"
-                        ? "bg-green-500/20 border border-green-500/30"
-                        : "bg-red-500/20 border border-red-500/30"
-                    }`}
-                  />
-                )}
-                <span className="relative z-20">{mode}</span>
+                <Settings className="w-4 h-4" />
               </button>
-            ))}
+              <AnimatePresence>
+                {showSlippage && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 top-12 z-50 w-64 bg-[#121212] border border-white/10 rounded-xl p-4 shadow-2xl"
+                  >
+                    <h3 className="text-xs font-bold text-gray-500 mb-3 uppercase">
+                      Max Slippage
+                    </h3>
+                    <div className="grid grid-cols-4 gap-2">
+                      {SLIPPAGE_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => {
+                            setSlippage(opt.value);
+                            setShowSlippage(false);
+                          }}
+                          className={`px-2 py-2 rounded-lg text-xs font-bold transition-all ${
+                            slippage === opt.value
+                              ? "bg-blue-600 text-white"
+                              : "bg-white/5 text-gray-400 hover:bg-white/10"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
-          {/* Inputs */}
           <div className="flex flex-col gap-2 relative z-10">
-            {/* YOU PAY (Limit/Market 탭 복구) */}
             <motion.div
               layout
-              className={`input-well p-4 flex flex-col relative transition-colors hover:border-white/10 min-h-[170px] ${
-                orderType === "market" ? "justify-center" : "justify-between"
-              }`}
+              className={`input-well p-4 flex flex-col relative transition-colors hover:border-white/10 min-h-[170px] justify-center`}
             >
-              <div
-                className={`flex justify-between text-xs font-bold text-gray-500 tracking-wide ${
-                  orderType === "market" ? "mb-4" : ""
-                }`}
-              >
+              <div className="flex justify-between text-xs font-bold text-gray-500 tracking-wide mb-4">
                 <span>YOU PAY</span>
                 <div className="flex gap-3">
                   <span
@@ -411,14 +470,12 @@ export default function Home() {
               </AnimatePresence>
             </motion.div>
 
-            {/* Arrow */}
             <div className="flex justify-center -my-5 relative z-20 pointer-events-none">
               <div className="bg-[#1a1c23] border border-white/10 p-2 rounded-xl text-gray-400 shadow-xl">
                 <ArrowRightLeft className="w-4 h-4 rotate-90 text-white" />
               </div>
             </div>
 
-            {/* YOU RECEIVE */}
             <div className="input-well p-4 flex flex-col gap-3 pt-6 min-h-[110px] justify-center">
               <div className="text-xs font-bold text-gray-500 tracking-wide">
                 YOU RECEIVE
@@ -457,7 +514,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Info Section (상세 정보 복구) */}
           <div className="mt-6 flex flex-col gap-4 relative z-10 flex-1 justify-end border-t border-white/5 pt-4">
             <div className="px-2 space-y-3">
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
@@ -493,8 +549,14 @@ export default function Home() {
               </div>
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
                 <span>Max Slippage</span>
-                <button className="flex items-center gap-1 bg-white/5 px-1.5 py-0.5 rounded text-gray-300 hover:text-white transition-colors">
-                  Auto (0.5%) <Settings className="w-3 h-3" />
+                <button
+                  onClick={() => setShowSlippage(true)}
+                  className="flex items-center gap-1 bg-white/5 px-1.5 py-0.5 rounded text-gray-300 hover:text-white transition-colors"
+                >
+                  {slippage === "auto"
+                    ? "Auto (0.5%)"
+                    : `${(parseFloat(slippage) * 100).toFixed(1)}%`}{" "}
+                  <Settings className="w-3 h-3" />
                 </button>
               </div>
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
@@ -503,8 +565,6 @@ export default function Home() {
                   <Sparkles className="w-3 h-3" /> Gasless
                 </span>
               </div>
-
-              {/* Total Cost 복구 */}
               <div className="flex justify-between items-center pt-3 mt-1 border-t border-white/5">
                 <span className="text-sm font-bold text-gray-400">
                   Total Cost

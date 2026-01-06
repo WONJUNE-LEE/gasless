@@ -2,8 +2,9 @@
 
 import { NextResponse } from "next/server";
 import { createHmac } from "crypto";
+import { CHAINS, NATIVE_TOKEN_ADDRESS } from "@/lib/api";
 
-const OKX_API_URL = "https://www.okx.com";
+const OKX_API_URL = "https://web3.okx.com"; // [수정] v6 Base URL
 
 function generateOkxHeaders(
   method: string,
@@ -13,7 +14,6 @@ function generateOkxHeaders(
   const apiKey = process.env.OKX_API_KEY!;
   const secretKey = process.env.OKX_SECRET_KEY!;
   const passphrase = process.env.OKX_PASSPHRASE!;
-  const projectId = process.env.OKX_PROJECT_ID!;
 
   const timestamp = new Date().toISOString();
   const message = timestamp + method + requestPath + queryString;
@@ -27,33 +27,40 @@ function generateOkxHeaders(
     "OK-ACCESS-SIGN": signature,
     "OK-ACCESS-TIMESTAMP": timestamp,
     "OK-ACCESS-PASSPHRASE": passphrase,
-    "OK-ACCESS-PROJECT": projectId,
+    "OK-ACCESS-PROJECT": process.env.OKX_PROJECT_ID!,
   };
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const chainId = searchParams.get("chainId");
-  const tokenAddress = searchParams.get("tokenAddress");
+  let tokenAddress = searchParams.get("tokenAddress");
   const timeframe = searchParams.get("timeframe") || "1D";
 
   if (!chainId || !tokenAddress) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
 
-  // Timeframe 매핑
-  let bar = "1D";
+  // [핵심] 차트용 주소 변환: Native Token(0xeeee...) -> Wrapped Token
+  if (tokenAddress.toLowerCase() === NATIVE_TOKEN_ADDRESS) {
+    const chainConfig = CHAINS.find((c) => c.id === parseInt(chainId));
+    if (chainConfig?.wrappedTokenAddress) {
+      tokenAddress = chainConfig.wrappedTokenAddress;
+    }
+  }
+
+  // v6 Timeframe 매핑
+  let bar = "1D"; // 기본값
   if (timeframe === "1H") bar = "1H";
   if (timeframe === "4H") bar = "4H";
   if (timeframe === "1W") bar = "1W";
 
   try {
-    const endpoint = "/api/v5/dex/market/candles";
+    const endpoint = "/api/v6/dex/market/candles"; // [수정] v6
 
-    // [수정 핵심] chainId -> chainIndex 변경
     const queryParams = new URLSearchParams({
       chainIndex: chainId,
-      tokenContractAddress: tokenAddress.toLowerCase(), // 주소 소문자 확인
+      tokenContractAddress: tokenAddress.toLowerCase(),
       bar: bar,
       limit: "100",
     });
@@ -71,7 +78,7 @@ export async function GET(request: Request) {
       throw new Error(data.msg || "OKX Chart API Error");
     }
 
-    // [수정 6] Volume 데이터 포함 (volUsd)
+    // v6 Response: [ts, o, h, l, c, vol, volUsd, confirm]
     const ohlcv = data.data
       .map((item: string[]) => ({
         time: parseInt(item[0]) / 1000,
@@ -79,8 +86,6 @@ export async function GET(request: Request) {
         high: parseFloat(item[2]),
         low: parseFloat(item[3]),
         close: parseFloat(item[4]),
-        // index 5: vol (base currency), index 6: volUsd (quote currency)
-        // 안전하게 파싱
         volUsd: item[6] ? parseFloat(item[6]) : 0,
       }))
       .reverse();

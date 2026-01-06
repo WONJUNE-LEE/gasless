@@ -4,11 +4,14 @@
 import { Wallet, Search } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation"; // Next.js 13+ App Router
 
 export default function Header() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
+  // 헤더 검색창 클릭 시 메인 페이지의 토큰 선택 팝업을 여는 이벤트 발생
+  const handleOpenSearch = () => {
+    // Custom Event Dispatch
+    window.dispatchEvent(new CustomEvent("open-token-selector"));
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[var(--border-color)] bg-[var(--header-bg)] backdrop-blur-md">
@@ -19,21 +22,20 @@ export default function Header() {
           </span>
         </Link>
 
-        {/* 중앙: 종목 검색창 */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
-          <div className="w-full relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-white transition-colors" />
-            <input
-              type="text"
-              readOnly
-              onClick={() => {
-                // [수정] 'open-token-selector-chart' 이벤트 발송
-                // 차트용 토큰(Token A)을 변경하기 위함
-                window.dispatchEvent(new Event("open-token-selector-chart"));
-              }}
-              placeholder="Search token (e.g. BTC, ETH)"
-              className="w-full h-10 rounded-full bg-white/5 border border-white/5 focus:border-white/20 px-10 text-sm outline-none transition-all placeholder-gray-500 text-white cursor-pointer hover:bg-white/10"
-            />
+        {/* Global Search Trigger */}
+        <div className="flex-1 max-w-xl relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            readOnly // 직접 입력 방지 (팝업 유도)
+            onClick={handleOpenSearch}
+            placeholder="Search tokens (ETH, USDC...)"
+            className="w-full h-10 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 outline-none hover:bg-white/10 hover:border-white/20 focus:border-blue-500/50 transition-all text-sm text-white placeholder-gray-500 cursor-pointer"
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
+            <span className="text-[10px] font-bold text-gray-500 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+              /
+            </span>
           </div>
         </div>
 

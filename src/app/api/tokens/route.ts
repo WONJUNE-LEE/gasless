@@ -1,14 +1,14 @@
-// src/app/api/tokens/route.ts
-
 import { NextResponse } from "next/server";
 import { createHmac } from "crypto";
+import { CHAINS, NATIVE_TOKEN_ADDRESS } from "@/lib/api";
 
-const OKX_API_URL = "https://www.okx.com";
+const OKX_API_URL = "https://web3.okx.com";
 
-// 서버 캐시
+// 서버 캐시 설정 (5분)
 const topTokensCache = new Map<string, { data: any[]; timestamp: number }>();
-const CACHE_DURATION = 10 * 60 * 1000;
+const CACHE_DURATION = 5 * 60 * 1000;
 
+// OKX 헤더 생성 함수
 function generateOkxHeaders(
   method: string,
   requestPath: string,
@@ -17,7 +17,6 @@ function generateOkxHeaders(
   const apiKey = process.env.OKX_API_KEY!;
   const secretKey = process.env.OKX_SECRET_KEY!;
   const passphrase = process.env.OKX_PASSPHRASE!;
-  const projectId = process.env.OKX_PROJECT_ID!;
 
   const timestamp = new Date().toISOString();
   const message = timestamp + method + requestPath + queryString;
@@ -31,18 +30,20 @@ function generateOkxHeaders(
     "OK-ACCESS-SIGN": signature,
     "OK-ACCESS-TIMESTAMP": timestamp,
     "OK-ACCESS-PASSPHRASE": passphrase,
-    "OK-ACCESS-PROJECT": projectId,
+    "OK-ACCESS-PROJECT": process.env.OKX_PROJECT_ID!,
   };
 }
 
-// [신규] OKX API 호출 재시도 함수 (Backend)
+// 재시도 로직이 포함된 Fetch 함수
 async function fetchOkxWithRetry(url: string, headers: any, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
       const res = await fetch(url, { method: "GET", headers });
       if (res.ok) return res;
-      if (res.status >= 400 && res.status < 500)
+      // 4xx, 5xx 에러 발생 시 에러 throw
+      if (res.status >= 400) {
         throw new Error(`OKX Client Error: ${res.status}`);
+      }
     } catch (e) {
       if (i === retries - 1) throw e;
       await new Promise((r) => setTimeout(r, 1000));
@@ -55,12 +56,19 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const chainId = searchParams.get("chainId") || "1";
   const query = searchParams.get("q");
-  const isTop = searchParams.get("type") === "top";
 
-  // 1. [검색 모드]
-  if (query) {
-    try {
-      const endpoint = "/api/v5/dex/market/token/search";
+  // 현재 체인 정보 및 Wrapped Token 주소 찾기 (소문자 비교)
+  const currentChain = CHAINS.find((c) => c.id === parseInt(chainId));
+  const wrappedAddress = currentChain?.wrappedTokenAddress?.toLowerCase();
+
+  try {
+    let rawTokens: any[] = [];
+
+    // ---------------------------------------------------------
+    // 1. 검색 모드 (Search API)
+    // ---------------------------------------------------------
+    if (query) {
+      const endpoint = "/api/v6/dex/market/token/search";
       const queryParams = new URLSearchParams({
         chains: chainId,
         search: query.toLowerCase(),
@@ -75,72 +83,118 @@ export async function GET(request: Request) {
       const data = await res.json();
 
       if (data.code !== "0") throw new Error(data.msg);
-
-      return NextResponse.json(mapTokenData(data.data, chainId));
-    } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      rawTokens = data.data || [];
     }
-  }
+    // ---------------------------------------------------------
+    // 2. 상위 토큰 리스트 모드 (Toplist API)
+    // ---------------------------------------------------------
+    else {
+      const cacheKey = `top_${chainId}`;
+      const cached = topTokensCache.get(cacheKey);
 
-  // 2. [상위 토큰 모드]
-  const cacheKey = `top_${chainId}`;
-  const cached = topTokensCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return NextResponse.json(cached.data);
-  }
+      // 캐시 유효하면 반환
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return NextResponse.json(cached.data);
+      }
 
-  try {
-    const endpoint = "/api/v5/dex/aggregator/all-tokens";
-    const queryParams = new URLSearchParams({ chainIndex: chainId });
-    const queryString = "?" + queryParams.toString();
-    const headers = generateOkxHeaders("GET", endpoint, queryString);
+      // v6 Toplist API (SortBy 6: MarketCap, TimeFrame 4: 24h)
+      const endpoint = "/api/v6/dex/market/token/toplist";
+      const queryParams = new URLSearchParams({
+        chains: chainId,
+        sortBy: "6", // 시가총액 기준 정렬
+        timeFrame: "4",
+      });
+      const queryString = "?" + queryParams.toString();
+      const headers = generateOkxHeaders("GET", endpoint, queryString);
 
-    const res = await fetchOkxWithRetry(
-      `${OKX_API_URL}${endpoint}${queryString}`,
-      headers
-    );
-    const data = await res.json();
+      const res = await fetchOkxWithRetry(
+        `${OKX_API_URL}${endpoint}${queryString}`,
+        headers
+      );
+      const data = await res.json();
 
-    if (data.code !== "0") throw new Error(data.msg);
+      if (data.code !== "0") throw new Error(data.msg);
+      rawTokens = data.data || [];
+    }
 
-    // 데이터 매핑
-    let tokens = mapTokenData(data.data, chainId);
+    // ---------------------------------------------------------
+    // 3. 데이터 매핑 및 네이티브 토큰 변환
+    // ---------------------------------------------------------
+    let mappedTokens = rawTokens.map((t: any) => {
+      const tokenAddr = t.tokenContractAddress.toLowerCase();
+      let isNative = false;
 
-    // 유동성 정렬
-    tokens.sort(
-      (a, b) => parseFloat(b.liquidity || "0") - parseFloat(a.liquidity || "0")
-    );
+      // [핵심] Wrapped Token 주소와 일치하면 Native Token으로 변환
+      let finalAddress = t.tokenContractAddress;
+      let finalName = t.tokenName;
+      let finalSymbol = t.tokenSymbol;
 
-    const topTokens = tokens.slice(0, 20);
-    topTokensCache.set(cacheKey, { data: topTokens, timestamp: Date.now() });
+      if (wrappedAddress && tokenAddr === wrappedAddress) {
+        finalAddress = NATIVE_TOKEN_ADDRESS; // 0xeeee...
+        finalName = currentChain?.name || "Native Token";
+        finalSymbol = currentChain?.symbol || "ETH";
+        isNative = true;
+      }
 
-    return NextResponse.json(topTokens);
+      return {
+        chainId: parseInt(chainId),
+        address: finalAddress,
+        name: finalName,
+        symbol: finalSymbol,
+        decimals: parseInt(t.decimal || t.decimals || "18"),
+        logoURI: t.tokenLogoUrl || t.logoUrl || "",
+        price: t.price || t.tokenUnitPrice || "0",
+        change24h: t.change || t.change24H || "0",
+        volume24h: t.volume || t.vol24h || "0",
+        liquidity: t.liquidity || "0",
+        marketCap: t.marketCap || "0",
+        isNative: isNative,
+        // 원본 유동성 값 보존 (정렬용)
+        rawLiquidity: parseFloat(t.liquidity || "0"),
+        rawMarketCap: parseFloat(t.marketCap || "0"),
+      };
+    });
+
+    // ---------------------------------------------------------
+    // 4. 중복 제거 (address 기준)
+    // ---------------------------------------------------------
+    const uniqueTokensMap = new Map();
+
+    mappedTokens.forEach((token: any) => {
+      // 이미 존재하는 주소면 건너뜀 (리스트 순서상 상위 항목 우선)
+      if (!uniqueTokensMap.has(token.address)) {
+        uniqueTokensMap.set(token.address, token);
+      }
+    });
+
+    const uniqueTokens = Array.from(uniqueTokensMap.values());
+
+    // ---------------------------------------------------------
+    // 5. 최종 정렬 (네이티브 우선 -> 시가총액 순) 및 캐시 저장
+    // ---------------------------------------------------------
+    if (!query) {
+      uniqueTokens.sort((a: any, b: any) => {
+        // 1순위: 네이티브 토큰
+        if (a.isNative && !b.isNative) return -1;
+        if (!a.isNative && b.isNative) return 1;
+
+        // 2순위: 시가총액 (내림차순)
+        return b.rawMarketCap - a.rawMarketCap;
+      });
+
+      // [수정] cacheKey 변수 대신 직접 키 생성
+      topTokensCache.set(`top_${chainId}`, {
+        data: uniqueTokens,
+        timestamp: Date.now(),
+      });
+    }
+
+    return NextResponse.json(uniqueTokens);
   } catch (error: any) {
-    console.error(`Fetch Top Tokens Error (${chainId}):`, error);
-    if (cached) return NextResponse.json(cached.data);
+    console.error(`Fetch Tokens Error (${chainId}):`, error);
     return NextResponse.json(
-      { error: "Failed to fetch tokens" },
+      { error: error.message || "Failed to fetch tokens" },
       { status: 500 }
     );
   }
-}
-
-// [수정] 데이터 매핑 함수
-function mapTokenData(rawList: any[], chainId: string) {
-  return rawList.map((t: any) => ({
-    chainId: parseInt(chainId),
-    address: t.tokenContractAddress,
-    name: t.tokenName,
-    symbol: t.tokenSymbol,
-    decimals: parseInt(t.decimals || "18"),
-    logoURI: t.tokenLogoUrl || t.logoUrl || "",
-    price: t.price || t.unitPrice || "0",
-    change24h: t.change24H || t.change || "0",
-
-    // [중요 수정] 볼륨 필드를 우선순위대로 찾습니다.
-    volume24h: t.volume24H || t.vol24h || t.volCcy24h || t.volume || "0",
-
-    liquidity: t.liquidity || "0",
-    marketCap: t.marketCap || "0",
-  }));
 }
