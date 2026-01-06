@@ -56,7 +56,7 @@ export const CHAINS = [
     symbol: "MON",
     logo: "https://assets.coingecko.com/coins/images/33059/small/monad.png",
     slug: "monad",
-  }, // [신규] Monad 추가
+  },
   {
     id: 324,
     name: "zkSync Era",
@@ -129,7 +129,6 @@ export interface TokenInfo {
   symbol: string;
   decimals: number;
   logoURI?: string;
-  // OKX API에서 오는 추가 정보
   price?: string;
   change24h?: string;
   volume24h?: string;
@@ -137,61 +136,155 @@ export interface TokenInfo {
   marketCap?: string;
 }
 
-// DEFAULT_TOKENS: 앱 초기 로딩 시 빈 화면을 방지하기 위한 Placeholder 역할입니다.
-// 실제 데이터는 컴포넌트 마운트 후 OKX API를 통해 즉시 업데이트됩니다.
-export const DEFAULT_TOKENS: Record<number, { A: TokenInfo; B: TokenInfo }> = {
-  42161: {
-    A: {
-      chainId: 42161,
-      address: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
-      name: "Wrapped Ether",
-      symbol: "WETH",
-      decimals: 18,
-      logoURI: "https://assets.coingecko.com/coins/images/2518/thumb/weth.png",
-    },
-    B: {
-      chainId: 42161,
-      address: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
-      name: "Tether USD",
-      symbol: "USDT",
-      decimals: 6,
-      logoURI: "https://assets.coingecko.com/coins/images/325/thumb/Tether.png",
-    },
-  },
-  // ... (다른 체인들은 필요 시 추가, 없으면 코드에서 Fallback 처리됨)
+export const NATIVE_TOKEN_ADDRESS =
+  "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+
+// 차트/마켓 데이터 조회를 위한 네이티브 -> 래핑 토큰 매핑
+const WRAPPED_TOKENS: Record<number, string> = {
+  1: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // ETH -> WETH
+  42161: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", // Arb ETH -> WETH
+  56: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // BNB -> WBNB
+  137: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270", // MATIC -> WMATIC (POL)
+  10: "0x4200000000000000000000000000000000000006", // OP ETH -> WETH
+  8453: "0x4200000000000000000000000000000000000006", // Base ETH -> WETH
+  43114: "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7", // AVAX -> WAVAX
+  324: "0x5AEa5775959fBC2557Cc8789bC1bf90A239D9a91", // zkSync ETH -> WETH
+  59144: "0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f", // Linea ETH -> WETH
+  5000: "0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8", // Mantle MNT -> WMNT
+  534352: "0x5300000000000000000000000000000000000004", // Scroll ETH -> WETH
+  250: "0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83", // Fantom FTM -> WFTM
+  100: "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d", // Gnosis xDAI -> WXDAI
+  1088: "0x75cb093E4D94692d0fd866ae105633c72c693446", // Metis -> WMetis
+  196: "0xe538905cf8410324e036e773c85f34bc0f500bd2", // X Layer OKB -> WOKB
+  81457: "0x4300000000000000000000000000000000000004", // Blast ETH -> WETH
+  // Monad Wrapped Token (Testnet Placeholder or Canonical)
+  143: "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701", // Monad WMON (Example/Placeholder)
 };
 
-// 1. 토큰 리스트 가져오기 (OKX API)
+export interface TokenInfo {
+  chainId: number;
+  address: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  logoURI?: string;
+  price?: string;
+  change24h?: string;
+  volume24h?: string;
+  liquidity?: string;
+  marketCap?: string;
+}
+
+/// [신규] API 재시도(Retry) 헬퍼 함수
+async function fetchWithRetry(
+  url: string,
+  retries = 3,
+  delay = 1000
+): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return res;
+      if (res.status >= 400 && res.status < 500)
+        throw new Error(`Client Error: ${res.status}`);
+      throw new Error(`Server Error: ${res.status}`);
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error("All retries failed");
+}
+
+// [변경] DEFAULT_TOKENS 리스트 삭제 -> 비상용 단일 Fallback 정의
+// 네트워크가 완전히 끊기거나 API가 죽었을 때 앱 크래시 방지용
+const FALLBACK_PAIR: { A: TokenInfo; B: TokenInfo } = {
+  A: {
+    chainId: 0,
+    address: NATIVE_TOKEN_ADDRESS,
+    name: "Loading...",
+    symbol: "---",
+    decimals: 18,
+    logoURI: "",
+  },
+  B: {
+    chainId: 0,
+    address: "0x0000000000000000000000000000000000000000",
+    name: "Loading...",
+    symbol: "---",
+    decimals: 6,
+    logoURI: "",
+  },
+};
+
+// 1. 토큰 리스트 가져오기
 export const fetchTokenList = async (
   chainId: number,
-  query: string = ""
+  query: string = "",
+  type: "search" | "top" = "search"
 ): Promise<TokenInfo[]> => {
   try {
-    const endpoint = `/api/tokens?chainId=${chainId}${
-      query ? `&q=${encodeURIComponent(query)}` : ""
-    }`;
-    const res = await fetch(endpoint);
-    if (!res.ok) throw new Error("API Failed");
+    const queryParam =
+      type === "top"
+        ? "&type=top"
+        : query
+        ? `&q=${encodeURIComponent(query)}`
+        : "";
+    const endpoint = `/api/tokens?chainId=${chainId}${queryParam}`;
+
+    const res = await fetchWithRetry(endpoint);
     return await res.json();
   } catch (e) {
     console.error("Fetch Tokens Error:", e);
-    // 실패 시 기본 토큰 반환하여 크래시 방지
-    const def = DEFAULT_TOKENS[chainId] || DEFAULT_TOKENS[42161];
-    return [def.A, def.B];
+    // 에러 발생 시 빈 배열 반환 (UI에서 로딩 상태나 'No tokens' 처리)
+    return [];
   }
 };
 
-// 2. [신규] 토큰 마켓 데이터 가져오기 (OKX API Only)
-// DexScreener를 완전히 대체합니다.
+// 2. 동적 기본 쌍(Pair) 가져오기
+export const fetchDefaultPair = async (
+  chainId: number
+): Promise<{ A: TokenInfo; B: TokenInfo }> => {
+  try {
+    // 백엔드에서 유동성 상위 토큰 가져오기
+    const topTokens = await fetchTokenList(chainId, "", "top");
+
+    if (!topTokens || topTokens.length === 0)
+      throw new Error("No tokens found");
+
+    // A: 네이티브 또는 래핑 토큰 찾기
+    let tokenA = topTokens.find(
+      (t) =>
+        t.address.toLowerCase() === NATIVE_TOKEN_ADDRESS ||
+        t.symbol.toUpperCase().startsWith("W") // WETH, WBNB 등
+    );
+    if (!tokenA) tokenA = topTokens[0];
+
+    // B: 스테이블 코인 찾기 (A와 다른 것)
+    let tokenB = topTokens.find(
+      (t) =>
+        t.address.toLowerCase() !== tokenA!.address.toLowerCase() &&
+        (t.symbol.toUpperCase().includes("USD") ||
+          t.symbol.toUpperCase() === "DAI")
+    );
+    if (!tokenB) tokenB = topTokens[1] || topTokens[0];
+
+    return { A: tokenA!, B: tokenB! };
+  } catch (e) {
+    console.error("Auto-detect Default Pair Failed:", e);
+    // 실패 시 비상용 Fallback 반환 (Loading... 표시됨)
+    return FALLBACK_PAIR;
+  }
+};
+
+// 3. 토큰 마켓 데이터 가져오기
 export const fetchTokenMarketData = async (
   tokenAddress: string,
   chainId: number
 ): Promise<TokenInfo | null> => {
   try {
-    // OKX의 토큰 검색 API를 활용하여 상세 정보를 가져옵니다.
     const tokens = await fetchTokenList(chainId, tokenAddress);
     if (tokens && tokens.length > 0) {
-      // 검색 결과 중 주소가 정확히 일치하는 토큰을 찾습니다.
       const match = tokens.find(
         (t) => t.address.toLowerCase() === tokenAddress.toLowerCase()
       );
@@ -204,19 +297,16 @@ export const fetchTokenMarketData = async (
   }
 };
 
-// 3. 차트 데이터 (OKX Market API 사용)
-// poolAddress 인자에 실제로는 tokenAddress가 들어옵니다.
+// 4. 차트 데이터 (Retry 적용 및 Volume 파싱)
 export const fetchOHLCV = async (
   tokenAddress: string,
   timeframe: string,
   chainId: number
 ) => {
   try {
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `/api/chart?chainId=${chainId}&tokenAddress=${tokenAddress}&timeframe=${timeframe}`
     );
-    if (!res.ok) throw new Error("Chart API Failed");
-
     const data = await res.json();
     if (!Array.isArray(data)) return [];
 
@@ -226,6 +316,8 @@ export const fetchOHLCV = async (
       high: parseFloat(item.high),
       low: parseFloat(item.low),
       close: parseFloat(item.close),
+      // [수정 6] Volume 추가
+      volume: item.volUsd || 0,
     }));
   } catch (e) {
     console.error("Chart Fetch Error:", e);

@@ -1,10 +1,11 @@
+// src/components/dex/TokenSelector.tsx
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Check } from "lucide-react";
+import { Search, X, Check, Copy, ExternalLink } from "lucide-react";
 import { TokenInfo, CHAINS, fetchTokenList } from "@/lib/api";
 import { useEffect, useState } from "react";
-import { useDebounce } from "@/lib/utils"; // useDebounce 훅이 없다면 아래 예시 참고
+import { useDebounce } from "@/lib/utils";
 
 interface Props {
   isOpen: boolean;
@@ -27,18 +28,37 @@ export default function TokenSelector({
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 검색어 디바운싱 (300ms)
+  // [수정 3] 로컬 체인 상태 관리 (UI 즉시 반영 방지)
+  // 모달이 열릴 때만 부모의 chainId로 초기화
+  const [activeChainId, setActiveChainId] = useState(selectedChainId);
+
+  // 복사 알림 상태
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  // 체인 변경 또는 검색어 변경 시 토큰 목록 로드
+  // 모달 열릴 때 초기화
+  useEffect(() => {
+    if (isOpen) {
+      setActiveChainId(selectedChainId);
+      setSearchQuery("");
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, selectedChainId]);
+
+  // 토큰 목록 로드 (activeChainId 기준)
   useEffect(() => {
     if (!isOpen) return;
 
     const loadTokens = async () => {
       setIsLoading(true);
-      // 검색어가 있으면 검색 API, 없으면 전체 목록 API 호출
       const fetchedTokens = await fetchTokenList(
-        selectedChainId,
+        activeChainId, // 로컬 체인 ID 사용
         debouncedSearch
       );
       setTokens(fetchedTokens);
@@ -46,7 +66,25 @@ export default function TokenSelector({
     };
 
     loadTokens();
-  }, [selectedChainId, debouncedSearch, isOpen]);
+  }, [activeChainId, debouncedSearch, isOpen]);
+
+  // 주소 복사 핸들러
+  const handleCopy = (e: React.MouseEvent, address: string) => {
+    e.stopPropagation(); // 부모 클릭 방지
+    navigator.clipboard.writeText(address);
+    setCopiedAddress(address);
+    setTimeout(() => setCopiedAddress(null), 2000);
+  };
+
+  // [수정 3-2] 토큰 선택 시 체인과 토큰을 함께 업데이트
+  const handleTokenSelect = (token: TokenInfo) => {
+    // 1. 체인이 변경되었다면 부모에게 알림
+    if (activeChainId !== selectedChainId) {
+      onSelectChain(activeChainId);
+    }
+    // 2. 토큰 선택
+    onSelect(token);
+  };
 
   return (
     <AnimatePresence>
@@ -68,7 +106,7 @@ export default function TokenSelector({
               transition={{ type: "spring", bounce: 0.3, duration: 0.5 }}
               className="w-full max-w-2xl rounded-3xl overflow-hidden pointer-events-auto flex h-[700px] max-h-[85vh] bg-[#121212] border border-white/10 shadow-2xl"
             >
-              {/* Networks Sidebar */}
+              {/* Sidebar (Networks) */}
               <div className="w-[140px] md:w-[180px] border-r border-white/10 flex flex-col bg-[#0a0a0a]">
                 <div className="p-4 border-b border-white/10">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -80,11 +118,11 @@ export default function TokenSelector({
                     <button
                       key={chain.id}
                       onClick={() => {
-                        onSelectChain(chain.id);
-                        setSearchQuery(""); // 체인 변경 시 검색어 초기화
+                        setActiveChainId(chain.id); // 로컬 상태만 변경
+                        setSearchQuery("");
                       }}
                       className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
-                        selectedChainId === chain.id
+                        activeChainId === chain.id
                           ? "bg-white/10 text-white shadow-sm border border-white/10 font-bold"
                           : "text-gray-500 hover:bg-white/5 hover:text-gray-300"
                       }`}
@@ -100,7 +138,7 @@ export default function TokenSelector({
                 </div>
               </div>
 
-              {/* Token List Content */}
+              {/* Main Content */}
               <div className="flex-1 flex flex-col min-w-0 bg-[#121212]">
                 <div className="p-5 border-b border-white/10 flex items-center justify-between shrink-0">
                   <h3 className="text-xl font-bold tracking-tight text-white">
@@ -108,7 +146,7 @@ export default function TokenSelector({
                   </h3>
                   <button
                     onClick={onClose}
-                    className="p-2 rounded-full hover:bg-white/10 transition-colors text-white"
+                    className="p-2 rounded-full hover:bg-white/10 text-white"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -142,14 +180,14 @@ export default function TokenSelector({
                     tokens.map((token) => (
                       <button
                         key={`${token.chainId}-${token.address}`}
-                        onClick={() => onSelect(token)}
+                        onClick={() => handleTokenSelect(token)}
                         className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all group ${
                           selectedToken?.address === token.address
                             ? "bg-blue-500/10 border border-blue-500/20"
                             : "hover:bg-white/5 border border-transparent"
                         }`}
                       >
-                        <div className="flex items-center gap-4 overflow-hidden">
+                        <div className="flex items-center gap-4 overflow-hidden min-w-0">
                           {token.logoURI ? (
                             <img
                               src={token.logoURI}
@@ -158,39 +196,34 @@ export default function TokenSelector({
                               onError={(e) => {
                                 (e.target as HTMLImageElement).style.display =
                                   "none";
-                                (
-                                  e.target as HTMLImageElement
-                                ).nextElementSibling?.classList.remove(
-                                  "hidden"
-                                );
                               }}
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center text-sm font-bold shadow-inner shrink-0 text-white">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center text-sm font-bold shrink-0 text-white">
                               {token.symbol[0]}
                             </div>
                           )}
-                          <div className="hidden w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center text-sm font-bold shadow-inner shrink-0 text-white">
-                            {token.symbol[0]}
-                          </div>
 
-                          <div className="text-left min-w-0">
+                          <div className="text-left min-w-0 flex flex-col gap-0.5">
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-lg text-white truncate">
                                 {token.symbol}
                               </span>
-                              {token.change24h && (
-                                <span
-                                  className={`text-xs ${
-                                    parseFloat(token.change24h) >= 0
-                                      ? "text-green-500"
-                                      : "text-red-500"
-                                  }`}
-                                >
-                                  {parseFloat(token.change24h) > 0 ? "+" : ""}
-                                  {parseFloat(token.change24h).toFixed(2)}%
+                              {/* [수정 4, 5] 컨트랙트 주소 표시 및 복사 */}
+                              <div
+                                className="flex items-center gap-1 text-[10px] text-gray-500 bg-white/5 px-1.5 py-0.5 rounded-md hover:bg-white/10 cursor-pointer transition-colors"
+                                onClick={(e) => handleCopy(e, token.address)}
+                              >
+                                <span>
+                                  {token.address.slice(0, 4)}...
+                                  {token.address.slice(-4)}
                                 </span>
-                              )}
+                                {copiedAddress === token.address ? (
+                                  <Check className="w-3 h-3 text-green-400" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                              </div>
                             </div>
                             <div className="text-sm text-gray-500 font-medium truncate">
                               {token.name}
@@ -198,11 +231,25 @@ export default function TokenSelector({
                           </div>
                         </div>
 
-                        {selectedToken?.address === token.address && (
-                          <div className="text-blue-500 pl-2">
-                            <Check className="w-5 h-5" />
-                          </div>
-                        )}
+                        <div className="text-right pl-4">
+                          {token.price && parseFloat(token.price) > 0 && (
+                            <div className="text-sm font-medium text-white">
+                              ${parseFloat(token.price).toLocaleString()}
+                            </div>
+                          )}
+                          {token.change24h && (
+                            <div
+                              className={`text-xs ${
+                                parseFloat(token.change24h) >= 0
+                                  ? "text-green-500"
+                                  : "text-red-500"
+                              }`}
+                            >
+                              {parseFloat(token.change24h) > 0 ? "+" : ""}
+                              {parseFloat(token.change24h).toFixed(2)}%
+                            </div>
+                          )}
+                        </div>
                       </button>
                     ))
                   )}

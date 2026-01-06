@@ -36,20 +36,16 @@ export async function GET(request: Request) {
   const tokenIn = searchParams.get("tokenIn");
   const tokenOut = searchParams.get("tokenOut");
   const amount = searchParams.get("amount");
-  const chainId = searchParams.get("chainId") || "42161"; // 체인 ID도 파라미터로 받음
+  const chainId = searchParams.get("chainId") || "42161";
 
   if (!tokenIn || !tokenOut || !amount) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
 
-  if (!process.env.OKX_API_KEY) {
-    return NextResponse.json({ error: "Server Key Error" }, { status: 500 });
-  }
-
   try {
     const endpoint = "/api/v5/dex/aggregator/quote";
     const queryParams = new URLSearchParams({
-      chainId: chainId,
+      chainIndex: chainId, // [확인] API 문서상 chainIndex
       amount: amount,
       fromTokenAddress: tokenIn,
       toTokenAddress: tokenOut,
@@ -72,21 +68,24 @@ export async function GET(request: Request) {
 
     const result = data.data[0];
 
-    // [수정] DEX 이름 추출 로직 강화
-    // routerResult 예시: "100% Uniswap V3" 또는 복잡한 JSON 문자열일 수 있음
+    // [수정 1] 실제 라우트 소스(DEX Name) 추출
+    // routerResult보다 dexRouterList 내부의 dexName이 더 정확한 경우가 많습니다.
     let dexName = "Aggregator";
-    if (result.routerResult) {
-      // 간단히 텍스트가 포함되어 있으면 그것을 사용
+    if (result.dexRouterList && result.dexRouterList.length > 0) {
+      // 여러 DEX를 거치는 경우 첫 번째 혹은 가장 비중 높은 DEX 표시
+      dexName = result.dexRouterList[0].dexName || result.routerResult;
+    } else if (result.routerResult) {
       dexName = result.routerResult;
-    } else if (result.dexName) {
-      dexName = result.dexName;
     }
+
+    // [수정 2] Price Impact 추출 (API 문서: priceImpactPercent)
+    const priceImpact = result.priceImpactPercent || result.priceImpact || "0";
 
     return NextResponse.json({
       dstAmount: result.toTokenAmount,
       gasCost: result.txFee || "0",
-      priceImpact: result.priceImpact || "0",
-      router: dexName, // Route UI에 표시될 이름
+      priceImpact: priceImpact,
+      router: dexName,
     });
   } catch (error: any) {
     console.error("OKX Quote Error:", error);

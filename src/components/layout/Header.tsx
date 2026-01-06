@@ -1,3 +1,4 @@
+// src/components/layout/Header.tsx
 "use client";
 
 import { Wallet, Search } from "lucide-react";
@@ -6,15 +7,12 @@ import { useState, useEffect } from "react";
 
 export default function Header() {
   const [mounted, setMounted] = useState(false);
-
   useEffect(() => setMounted(true), []);
-
   if (!mounted) return null;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[var(--border-color)] bg-[var(--header-bg)] backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        {/* [수정] 로고: gome.fi + 버터 색상 */}
         <Link href="/" className="flex items-center gap-2 group">
           <span className="text-2xl font-black tracking-tight text-butter drop-shadow-sm group-hover:scale-105 transition-transform">
             gome.fi
@@ -29,7 +27,9 @@ export default function Header() {
               type="text"
               readOnly
               onClick={() => {
-                window.dispatchEvent(new Event("open-token-selector"));
+                // [수정] 'open-token-selector-chart' 이벤트 발송
+                // 차트용 토큰(Token A)을 변경하기 위함
+                window.dispatchEvent(new Event("open-token-selector-chart"));
               }}
               placeholder="Search token (e.g. BTC, ETH)"
               className="w-full h-10 rounded-full bg-white/5 border border-white/5 focus:border-white/20 px-10 text-sm outline-none transition-all placeholder-gray-500 text-white cursor-pointer hover:bg-white/10"

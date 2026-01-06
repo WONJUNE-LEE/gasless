@@ -41,8 +41,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
 
-  // Timeframe 매핑 (OKX API 포맷에 맞춤)
-  // OKX: 1m, 3m, 5m, 15m, 30m, 1H, 2H, 4H, 6H, 12H, 1D, 1W, 1M
+  // Timeframe 매핑
   let bar = "1D";
   if (timeframe === "1H") bar = "1H";
   if (timeframe === "4H") bar = "4H";
@@ -50,9 +49,11 @@ export async function GET(request: Request) {
 
   try {
     const endpoint = "/api/v5/dex/market/candles";
+
+    // [수정 핵심] chainId -> chainIndex 변경
     const queryParams = new URLSearchParams({
-      chainId: chainId,
-      tokenContractAddress: tokenAddress.toLowerCase(), // EVM 주소는 소문자 권장
+      chainIndex: chainId,
+      tokenContractAddress: tokenAddress.toLowerCase(), // 주소 소문자 확인
       bar: bar,
       limit: "100",
     });
@@ -66,29 +67,29 @@ export async function GET(request: Request) {
     });
 
     const data = await res.json();
-
     if (data.code !== "0") {
       throw new Error(data.msg || "OKX Chart API Error");
     }
 
-    // OKX 응답 포맷: [ts, o, h, l, c, vol, volUsd, confirm]
-    // ts는 문자열 밀리초
+    // [수정 6] Volume 데이터 포함 (volUsd)
     const ohlcv = data.data
       .map((item: string[]) => ({
-        time: parseInt(item[0]) / 1000, // 초 단위로 변환 (Lightweight Charts)
+        time: parseInt(item[0]) / 1000,
         open: parseFloat(item[1]),
         high: parseFloat(item[2]),
         low: parseFloat(item[3]),
         close: parseFloat(item[4]),
+        // index 5: vol (base currency), index 6: volUsd (quote currency)
+        // 안전하게 파싱
+        volUsd: item[6] ? parseFloat(item[6]) : 0,
       }))
-      .reverse(); // 최신순 -> 과거순 정렬일 경우 reverse 필요 (Lightweight Charts는 오름차순 시간 필요)
+      .reverse();
 
-    // OKX는 내림차순(최신이 먼저)으로 줄 수 있으므로 시간 오름차순으로 정렬
     ohlcv.sort((a: any, b: any) => a.time - b.time);
 
     return NextResponse.json(ohlcv);
   } catch (error: any) {
-    console.error("OKX Chart Error:", error);
+    console.error("Chart Route Error:", error);
     return NextResponse.json(
       { error: "Failed to fetch chart", details: error.message },
       { status: 500 }
