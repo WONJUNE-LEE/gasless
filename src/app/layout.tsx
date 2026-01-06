@@ -1,27 +1,33 @@
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "next-themes";
 import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import { Providers } from "./providers"; // [추가]
 
-export const metadata = {
-  title: "FlashDex - Gasless Trading",
-  description: "Trade with zero gas fees on Hyperliquid",
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "Gasless DEX",
+  description: "Swap tokens seamlessly",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="flex min-h-screen flex-col antialiased">
-        {/* attribute="class"로 설정해야 Tailwind 다크모드와 호환됩니다 */}
-        <ThemeProvider attribute="class">
+    <html lang="en">
+      <body
+        className={`${inter.className} bg-[#0a0a0a] text-white min-h-screen`}
+      >
+        {/* Providers로 감싸기 */}
+        <Providers>
           <Header />
-          <main className="flex-1 flex flex-col items-center justify-center p-4">
-            {children}
-          </main>
-        </ThemeProvider>
+          <main>{children}</main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   );
