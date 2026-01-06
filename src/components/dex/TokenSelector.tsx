@@ -3,7 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, X, Check } from "lucide-react";
 import { TokenInfo, CHAINS, fetchTokenList } from "@/lib/api";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
+import { useDebounce } from "@/lib/utils"; // useDebounce 훅이 없다면 아래 예시 참고
 
 interface Props {
   isOpen: boolean;
@@ -23,38 +24,29 @@ export default function TokenSelector({
   onSelectChain,
 }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [allTokens, setAllTokens] = useState<TokenInfo[]>([]);
+  const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 1. 체인 변경 시 전체 토큰 로드 (인수 1개만 전달)
+  // 검색어 디바운싱 (300ms)
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // 체인 변경 또는 검색어 변경 시 토큰 목록 로드
   useEffect(() => {
     if (!isOpen) return;
 
     const loadTokens = async () => {
       setIsLoading(true);
-      // [수정됨] searchQuery 제거, chainId만 전달
-      const tokens = await fetchTokenList(selectedChainId);
-      setAllTokens(tokens);
+      // 검색어가 있으면 검색 API, 없으면 전체 목록 API 호출
+      const fetchedTokens = await fetchTokenList(
+        selectedChainId,
+        debouncedSearch
+      );
+      setTokens(fetchedTokens);
       setIsLoading(false);
     };
 
     loadTokens();
-  }, [selectedChainId, isOpen]);
-
-  // 2. 검색어 필터링 (클라이언트 사이드)
-  const filteredTokens = useMemo(() => {
-    if (!searchQuery) return allTokens.slice(0, 100);
-
-    const lowerQuery = searchQuery.toLowerCase();
-    return allTokens
-      .filter(
-        (t) =>
-          t.symbol.toLowerCase().includes(lowerQuery) ||
-          t.name.toLowerCase().includes(lowerQuery) ||
-          t.address.toLowerCase() === lowerQuery
-      )
-      .slice(0, 100);
-  }, [allTokens, searchQuery]);
+  }, [selectedChainId, debouncedSearch, isOpen]);
 
   return (
     <AnimatePresence>
@@ -76,7 +68,7 @@ export default function TokenSelector({
               transition={{ type: "spring", bounce: 0.3, duration: 0.5 }}
               className="w-full max-w-2xl rounded-3xl overflow-hidden pointer-events-auto flex h-[700px] max-h-[85vh] bg-[#121212] border border-white/10 shadow-2xl"
             >
-              {/* Left Sidebar: Networks */}
+              {/* Networks Sidebar */}
               <div className="w-[140px] md:w-[180px] border-r border-white/10 flex flex-col bg-[#0a0a0a]">
                 <div className="p-4 border-b border-white/10">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -89,7 +81,7 @@ export default function TokenSelector({
                       key={chain.id}
                       onClick={() => {
                         onSelectChain(chain.id);
-                        setSearchQuery("");
+                        setSearchQuery(""); // 체인 변경 시 검색어 초기화
                       }}
                       className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
                         selectedChainId === chain.id
@@ -108,7 +100,7 @@ export default function TokenSelector({
                 </div>
               </div>
 
-              {/* Right Content: Token List */}
+              {/* Token List Content */}
               <div className="flex-1 flex flex-col min-w-0 bg-[#121212]">
                 <div className="p-5 border-b border-white/10 flex items-center justify-between shrink-0">
                   <h3 className="text-xl font-bold tracking-tight text-white">
@@ -142,12 +134,12 @@ export default function TokenSelector({
                       <div className="w-6 h-6 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin" />
                       <span className="text-sm">Loading Token List...</span>
                     </div>
-                  ) : filteredTokens.length === 0 ? (
+                  ) : tokens.length === 0 ? (
                     <div className="text-center py-20 text-gray-500 text-sm">
                       No tokens found
                     </div>
                   ) : (
-                    filteredTokens.map((token) => (
+                    tokens.map((token) => (
                       <button
                         key={`${token.chainId}-${token.address}`}
                         onClick={() => onSelect(token)}
@@ -178,7 +170,7 @@ export default function TokenSelector({
                               {token.symbol[0]}
                             </div>
                           )}
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 hidden items-center justify-center text-sm font-bold shadow-inner shrink-0 text-white">
+                          <div className="hidden w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center text-sm font-bold shadow-inner shrink-0 text-white">
                             {token.symbol[0]}
                           </div>
 
@@ -187,6 +179,18 @@ export default function TokenSelector({
                               <span className="font-bold text-lg text-white truncate">
                                 {token.symbol}
                               </span>
+                              {token.change24h && (
+                                <span
+                                  className={`text-xs ${
+                                    parseFloat(token.change24h) >= 0
+                                      ? "text-green-500"
+                                      : "text-red-500"
+                                  }`}
+                                >
+                                  {parseFloat(token.change24h) > 0 ? "+" : ""}
+                                  {parseFloat(token.change24h).toFixed(2)}%
+                                </span>
+                              )}
                             </div>
                             <div className="text-sm text-gray-500 font-medium truncate">
                               {token.name}

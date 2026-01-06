@@ -18,42 +18,34 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toWei, fromWei } from "@/lib/utils";
 import {
-  findBestPool,
+  fetchTokenMarketData, // [변경] OKX 전용 함수 사용 (findBestPool 대체)
   fetchOHLCV,
   TokenInfo,
   CHAINS,
   DEFAULT_TOKENS,
-} from "@/lib/api";
+} from "@/lib/api"; //
 import NativeChart from "@/components/dex/NativeChart";
 import TokenSelector from "@/components/dex/TokenSelector";
 
-const DEFAULT_TOKEN_A: TokenInfo = {
-  chainId: 42161,
-  address: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
-  name: "Wrapped Ether",
-  symbol: "WETH",
-  decimals: 18,
-  logoURI: "https://assets.coingecko.com/coins/images/2518/thumb/weth.png",
-};
-const DEFAULT_TOKEN_B: TokenInfo = {
-  chainId: 42161,
-  address: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
-  name: "Tether USD",
-  symbol: "USDT",
-  decimals: 6,
-  logoURI: "https://assets.coingecko.com/coins/images/325/thumb/Tether.png",
-};
-
 export default function Home() {
   const [chainId, setChainId] = useState(42161);
-  const [tokenA, setTokenA] = useState<TokenInfo>(DEFAULT_TOKENS[42161].A);
-  const [tokenB, setTokenB] = useState<TokenInfo>(DEFAULT_TOKENS[42161].B);
+
+  // [변경] 초기 상태는 DEFAULT_TOKENS로 시작하지만, 곧바로 API 데이터로 업데이트됩니다.
+  const [tokenA, setTokenA] = useState<TokenInfo>(
+    DEFAULT_TOKENS[42161]?.A || DEFAULT_TOKENS[42161].A
+  );
+  const [tokenB, setTokenB] = useState<TokenInfo>(
+    DEFAULT_TOKENS[42161]?.B || DEFAULT_TOKENS[42161].B
+  );
   const [modalSource, setModalSource] = useState<
     "chart" | "pay" | "receive" | null
   >(null);
 
+  // [변경] poolInfo 대신 tokenMarketData 사용 (OKX 기반)
+  const [tokenMarketData, setTokenMarketData] = useState<TokenInfo | null>(
+    null
+  );
   const [chartData, setChartData] = useState<any[]>([]);
-  const [poolInfo, setPoolInfo] = useState<any>(null);
   const [isChartLoading, setIsChartLoading] = useState(false);
   const [timeframe, setTimeframe] = useState("1D");
 
@@ -74,35 +66,38 @@ export default function Home() {
       );
   }, []);
 
-  // [신규 추가] 체인 변경 시 해당 체인의 기본 토큰으로 리셋
-  // 이 로직이 없으면 Arbitrum 주소로 Ethereum에서 풀을 찾게 되어 가격 오류(USDT $6) 발생
+  // [변경] 체인 변경 시 리셋 및 기본 토큰 설정
   useEffect(() => {
-    const defaults = DEFAULT_TOKENS[chainId];
+    const defaults = DEFAULT_TOKENS[chainId] || DEFAULT_TOKENS[42161];
     if (defaults) {
       setTokenA(defaults.A);
       setTokenB(defaults.B);
     }
   }, [chainId]);
 
-  // [수정됨] 차트 로딩 로직
+  // [변경] 차트 및 마켓 데이터 로딩 (OKX API Only)
   useEffect(() => {
-    const loadChart = async () => {
+    const loadMarketData = async () => {
       setIsChartLoading(true);
-      // [중요] chainId를 두 번째 인자로 전달!
-      const pool = await findBestPool(tokenA.address, chainId);
 
-      if (pool) {
-        setPoolInfo(pool);
-        const candles = await fetchOHLCV(pool.pairAddress, timeframe, chainId);
-        setChartData(candles);
-        if (!limitPrice) setLimitPrice(parseFloat(pool.priceUsd).toString());
-      } else {
-        setPoolInfo(null);
-        setChartData([]);
+      // 1. 마켓 데이터 (가격, 유동성 등) - OKX API
+      // DexScreener 대신 OKX API를 통해 토큰 정보를 직접 가져옵니다.
+      const marketInfo = await fetchTokenMarketData(tokenA.address, chainId);
+      setTokenMarketData(marketInfo);
+
+      // 2. 차트 데이터 - OKX Market API
+      // poolAddress가 아닌 tokenAddress를 직접 사용하여 차트를 그립니다.
+      const candles = await fetchOHLCV(tokenA.address, timeframe, chainId);
+      setChartData(candles);
+
+      // 리밋 주문 가격 초기화 (마켓 데이터가 있을 경우)
+      if (marketInfo && !limitPrice && marketInfo.price) {
+        setLimitPrice(marketInfo.price);
       }
+
       setIsChartLoading(false);
     };
-    loadChart();
+    loadMarketData();
   }, [tokenA, timeframe, chainId]);
 
   useEffect(() => {
@@ -136,12 +131,11 @@ export default function Home() {
 
   const currentPayToken = activeTab === "buy" ? tokenB : tokenA;
   const currentReceiveToken = activeTab === "buy" ? tokenA : tokenB;
-  const payTokenPrice =
-    currentPayToken.symbol === "USDT" || currentPayToken.symbol === "USDC"
-      ? 1
-      : poolInfo
-      ? parseFloat(poolInfo.priceUsd)
-      : 0;
+
+  // [변경] 가격 정보: Market Data가 있으면 사용, 없으면 0
+  const displayPrice = tokenMarketData?.price
+    ? parseFloat(tokenMarketData.price)
+    : 0;
 
   const handleSelectToken = (token: TokenInfo) => {
     if (modalSource === "chart") setTokenA(token);
@@ -154,6 +148,7 @@ export default function Home() {
   };
 
   const currentChain = CHAINS.find((c) => c.id === chainId) || CHAINS[0];
+  const priceChange = parseFloat(tokenMarketData?.change24h || "0");
 
   return (
     <div className="container mx-auto p-4 lg:p-8 max-w-7xl min-h-screen flex flex-col gap-6">
@@ -177,6 +172,7 @@ export default function Home() {
             {tokenA.logoURI && (
               <img
                 src={tokenA.logoURI}
+                alt={tokenA.symbol}
                 className="w-10 h-10 rounded-full bg-white/10 shadow-lg group-hover:scale-110 transition-transform"
               />
             )}
@@ -191,51 +187,58 @@ export default function Home() {
         </div>
         <div className="text-right mt-4 md:mt-0">
           <div className="text-4xl font-black tabular-nums tracking-tight text-white drop-shadow-sm">
-            ${poolInfo ? parseFloat(poolInfo.priceUsd).toLocaleString() : "---"}
+            ${displayPrice > 0 ? displayPrice.toLocaleString() : "---"}
           </div>
           <div
             className={`text-sm font-bold flex justify-end items-center gap-1 ${
-              poolInfo?.priceChange.h24 >= 0 ? "text-green-400" : "text-red-400"
+              priceChange >= 0 ? "text-green-400" : "text-red-400"
             }`}
           >
-            {poolInfo?.priceChange.h24 >= 0 ? (
+            {priceChange >= 0 ? (
               <TrendingUp className="w-3 h-3" />
             ) : (
               <TrendingDown className="w-3 h-3" />
             )}
-            {poolInfo?.priceChange.h24}% (24h)
+            {Math.abs(priceChange)}% (24h)
           </div>
         </div>
       </div>
 
-      {/* 2. Main Grid: Swap Panel의 높이 제한 해제 (items-start 사용) */}
+      {/* 2. Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* [Left] Chart Area */}
         <div className="lg:col-span-2 relative rounded-3xl overflow-hidden bg-white/5 border border-white/5 shadow-xl h-[650px] flex flex-col">
           <div className="flex justify-between items-start p-4 z-10">
-            {poolInfo ? (
+            {tokenMarketData ? (
               <div className="flex gap-4 text-xs font-medium text-gray-400">
                 <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
                   <Layers className="w-3 h-3 text-white" />
-                  <span>{poolInfo.dexId}</span>
+                  <span>OKX Aggregator</span>
                 </div>
+                {/* [변경] OKX API 데이터 (Liquidity, Volume) 표시 */}
                 <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
                   <Droplets className="w-3 h-3 text-blue-400" />
                   <span>
                     Liq: $
-                    {parseFloat(poolInfo.liquidity?.usd || 0).toLocaleString()}
+                    {parseFloat(
+                      tokenMarketData.liquidity || "0"
+                    ).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
                   <BarChart2 className="w-3 h-3 text-green-400" />
                   <span>
                     Vol: $
-                    {parseFloat(poolInfo.volume?.h24 || 0).toLocaleString()}
+                    {parseFloat(
+                      tokenMarketData.volume24h || "0"
+                    ).toLocaleString()}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="text-xs text-gray-600">Loading Pool Info...</div>
+              <div className="text-xs text-gray-600">
+                Loading Market Data...
+              </div>
             )}
             <div className="flex bg-black/30 rounded-lg p-1 border border-white/5 backdrop-blur-md">
               {["1H", "4H", "1D", "1W"].map((tf) => (
@@ -269,14 +272,20 @@ export default function Home() {
                 />
               </div>
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-gray-600">
-                No Data Available
+              <div className="absolute inset-0 flex items-center justify-center text-gray-600 flex-col gap-2">
+                <span>No Chart Data Available</span>
+                {/* [추가] Monad 네트워크일 경우 안내 메시지 */}
+                {chainId === 143 && (
+                  <span className="text-xs text-gray-500">
+                    Monad chart not yet supported by OKX
+                  </span>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* [Right] Swap Panel: h-fit 및 min-h 사용으로 내용물에 맞게 늘어남 */}
+        {/* [Right] Swap Panel */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -368,6 +377,7 @@ export default function Home() {
                   {currentPayToken.logoURI && (
                     <img
                       src={currentPayToken.logoURI}
+                      alt={currentPayToken.symbol}
                       className="w-5 h-5 rounded-full"
                     />
                   )}
@@ -391,7 +401,7 @@ export default function Home() {
                       </span>
                       <input
                         type="number"
-                        placeholder={poolInfo?.priceUsd}
+                        placeholder={tokenMarketData?.price || "0"}
                         value={limitPrice}
                         onChange={(e) => setLimitPrice(e.target.value)}
                         className="bg-transparent text-right text-sm font-bold outline-none text-white w-1/2"
@@ -433,6 +443,7 @@ export default function Home() {
                   {currentReceiveToken.logoURI && (
                     <img
                       src={currentReceiveToken.logoURI}
+                      alt={currentReceiveToken.symbol}
                       className="w-5 h-5 rounded-full"
                     />
                   )}
@@ -445,7 +456,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Info Section (항상 표시되도록 함) */}
+          {/* Info Section */}
           <div className="mt-6 flex flex-col gap-4 relative z-10 flex-1 justify-end border-t border-white/5 pt-4">
             <div className="px-2 space-y-3">
               {/* Rate */}
@@ -467,7 +478,7 @@ export default function Home() {
                 </span>
               </div>
 
-              {/* [수정] Route: DEX 이름 강제 표시 */}
+              {/* Route */}
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
                 <span className="flex items-center gap-1">
                   Route <Info className="w-3 h-3" />
@@ -478,7 +489,6 @@ export default function Home() {
                       Via {quoteData.router}
                     </span>
                   ) : (
-                    /* 데이터 로딩 전이나 경로 없을 때 표시 */
                     <span className="text-xs text-gray-600 flex items-center gap-1">
                       Finding best route...
                     </span>
@@ -523,10 +533,11 @@ export default function Home() {
                   <div className="text-xl font-black text-white tabular-nums">
                     $
                     {amount
-                      ? (parseFloat(amount) * payTokenPrice).toLocaleString(
-                          undefined,
-                          { maximumFractionDigits: 2 }
-                        )
+                      ? (
+                          parseFloat(amount) * (displayPrice || 0)
+                        ).toLocaleString(undefined, {
+                          maximumFractionDigits: 2,
+                        })
                       : "0.00"}
                   </div>
                   <div className="text-[10px] text-gray-500 font-medium">
