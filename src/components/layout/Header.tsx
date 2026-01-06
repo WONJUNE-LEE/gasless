@@ -1,12 +1,10 @@
 "use client";
 
-import { Wallet, Sun, Moon, Search } from "lucide-react";
+import { Wallet, Search } from "lucide-react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Header() {
-  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -16,44 +14,32 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[var(--border-color)] bg-[var(--header-bg)] backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        {/* 로고 */}
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-xl font-black tracking-tight text-blue-600 dark:text-blue-500">
-            FlashDex
+        {/* [수정] 로고: gome.fi + 버터 색상 */}
+        <Link href="/" className="flex items-center gap-2 group">
+          <span className="text-2xl font-black tracking-tight text-butter drop-shadow-sm group-hover:scale-105 transition-transform">
+            gome.fi
           </span>
         </Link>
 
-        {/* 중앙: 종목 검색창 (토스증권 느낌) */}
+        {/* 중앙: 종목 검색창 */}
         <div className="hidden md:flex flex-1 max-w-md mx-8">
-          <div className="w-full relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <div className="w-full relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-white transition-colors" />
             <input
               type="text"
               readOnly
               onClick={() => {
-                // [추가] 검색창 클릭 시 메인 페이지의 토큰 선택 모달 열기 이벤트 발생
                 window.dispatchEvent(new Event("open-token-selector"));
               }}
               placeholder="Search token (e.g. BTC, ETH)"
-              className="w-full h-10 rounded-full bg-gray-100 dark:bg-zinc-900 border border-transparent focus:border-blue-500 px-10 text-sm outline-none transition-all placeholder-gray-500 dark:text-white cursor-pointer hover:bg-gray-200 dark:hover:bg-zinc-800"
+              className="w-full h-10 rounded-full bg-white/5 border border-white/5 focus:border-white/20 px-10 text-sm outline-none transition-all placeholder-gray-500 text-white cursor-pointer hover:bg-white/10"
             />
           </div>
         </div>
 
         {/* 우측 컨트롤 */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="rounded-full p-2.5 bg-gray-100 dark:bg-zinc-900 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-zinc-800 transition-colors"
-          >
-            {theme === "dark" ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-          </button>
-
-          <button className="flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-500 transition-all">
+          <button className="flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 active:scale-95">
             <Wallet className="h-4 w-4" />
             <span>Connect</span>
           </button>

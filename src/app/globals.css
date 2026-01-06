@@ -6,97 +6,108 @@
 }
 
 :root {
-  --background: #f8f9fa; /* 배경을 너무 하얗지 않게 */
-  --foreground: #171717;
+  /* 세련된 다크 네이비/그레이 배경 (너무 어둡지 않게) */
+  --background: #1a1c23;
+  --foreground: #ffffff;
 
-  --header-bg: rgba(255, 255, 255, 0.85);
-  --border-color: rgba(0, 0, 0, 0.1);
+  --header-bg: rgba(26, 28, 35, 0.8);
+  --border-color: rgba(255, 255, 255, 0.1);
 
-  /* 미국식 컬러 (Up=Green, Down=Red) */
+  /* 미국식 컬러 (Buy=Green, Sell=Red) */
   --color-up: #22c55e;
   --color-down: #ef4444;
-}
 
-.dark {
-  --background: #000000;
-  --foreground: #ededed;
-  --header-bg: rgba(0, 0, 0, 0.8);
-  --border-color: rgba(255, 255, 255, 0.15);
+  /* 포인트 컬러: 버터 (로고 전용) */
+  --color-butter: #fde047;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  /* 배경 그라데이션을 조금 더 진하게 하여 유리가 잘 보이도록 함 */
+  /* 은은한 배경 그라데이션 */
   background-image: radial-gradient(
-      circle at 15% 25%,
+      circle at 10% 20%,
       rgba(59, 130, 246, 0.08) 0%,
-      transparent 40%
+      transparent 50%
     ),
     radial-gradient(
-      circle at 85% 75%,
-      rgba(239, 68, 68, 0.08) 0%,
-      transparent 40%
+      circle at 90% 80%,
+      rgba(234, 179, 8, 0.05) 0%,
+      transparent 50%
     );
   background-attachment: fixed;
+  font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
-/* 1. 리얼 글래스 패널 (가독성 강화) */
+/* 글래스 패널 */
 .glass-panel {
-  /* 배경을 훨씬 불투명하게 변경 (0.15 -> 0.75) */
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5); /* 내부 하이라이트 강화 */
+  background: rgba(30, 34, 45, 0.6);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
-.dark .glass-panel {
-  background: rgba(25, 25, 25, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+/* 입력창 (Input Well) */
+.input-well {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* 부드러운 크기 변화 */
+}
+.input-well:focus-within {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
-/* 2. 유리 버튼 (일반) */
-.glass-btn {
-  background: rgba(255, 255, 255, 0.8); /* 버튼도 더 잘 보이게 */
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
+/* 숫자 입력창 스피너 제거 (크롬, 사파리, 엣지) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
-.glass-btn:hover {
-  background: rgba(255, 255, 255, 0.95);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-}
-.glass-btn:active {
-  transform: translateY(0);
+/* 파이어폭스 */
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 
-.dark .glass-btn {
-  background: rgba(40, 40, 40, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+/* Buy/Sell 버튼 */
+.btn-buy {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.5);
 }
-.dark .glass-btn:hover {
-  background: rgba(60, 60, 60, 0.9);
+.btn-sell {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
 }
 
-/* 3. 인풋 박스 */
-.glass-input {
-  background: rgba(240, 240, 240, 0.6); /* 더 진하게 */
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-.dark .glass-input {
-  background: rgba(0, 0, 0, 0.3);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.text-butter {
+  color: var(--color-butter);
 }
 
 .tabular-nums {
   font-feature-settings: "tnum";
   font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }

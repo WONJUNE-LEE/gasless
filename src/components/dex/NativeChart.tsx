@@ -1,14 +1,15 @@
 "use client";
 
+// [수정 1] CandlestickSeries 추가
 import {
   createChart,
   ColorType,
   IChartApi,
   CandlestickSeries,
 } from "lightweight-charts";
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 
-interface Props {
+interface ChartProps {
   data: {
     time: number;
     open: number;
@@ -16,51 +17,54 @@ interface Props {
     low: number;
     close: number;
   }[];
-  colors?: { textColor?: string };
+  colors?: {
+    backgroundColor?: string;
+    lineColor?: string;
+    textColor?: string;
+    areaTopColor?: string;
+    areaBottomColor?: string;
+  };
   activeTimeframe: string;
   onTimeframeChange: (tf: string) => void;
 }
 
-const TIMEFRAMES = ["1H", "4H", "1D", "1W"];
-
-export default function NativeChart({
-  data,
-  colors,
-  activeTimeframe,
-  onTimeframeChange,
-}: Props) {
+export default function NativeChart({ data, colors }: ChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
+    const handleResize = () => {
+      chartRef.current?.applyOptions({
+        width: chartContainerRef.current?.clientWidth,
+      });
+    };
+
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: colors?.textColor || "#9ca3af",
       },
-      grid: {
-        vertLines: { visible: false },
-        horzLines: { color: "rgba(255, 255, 255, 0.05)", style: 1 },
-      },
       width: chartContainerRef.current.clientWidth,
       height: chartContainerRef.current.clientHeight,
-      timeScale: {
-        timeVisible: true,
-        secondsVisible: false,
-        borderVisible: false,
+      grid: {
+        vertLines: { color: "rgba(255, 255, 255, 0.05)" },
+        horzLines: { color: "rgba(255, 255, 255, 0.05)" },
       },
       rightPriceScale: {
-        borderVisible: false, // 우측 가격축 선 제거
-        scaleMargins: {
-          top: 0.1, // 차트 여백
-          bottom: 0.1,
-        },
+        borderColor: "rgba(255, 255, 255, 0.1)",
+      },
+      timeScale: {
+        borderColor: "rgba(255, 255, 255, 0.1)",
+        timeVisible: true,
       },
     });
 
-    const newSeries = chart.addSeries(CandlestickSeries, {
+    chartRef.current = chart;
+
+    // [수정 2] v5 문법 적용: addSeries(CandlestickSeries, 옵션)
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
       upColor: "#22c55e",
       downColor: "#ef4444",
       borderVisible: false,
@@ -68,20 +72,17 @@ export default function NativeChart({
       wickDownColor: "#ef4444",
     });
 
-    const sortedData = [...data].sort((a, b) => a.time - b.time);
-    newSeries.setData(sortedData as any);
-    chart.timeScale().fitContent();
+    candlestickSeries.setData(
+      data.map((d) => ({
+        ...d,
+        time: d.time as any,
+      }))
+    );
 
-    chartRef.current = chart;
+    if (data.length > 0) {
+      chart.timeScale().fitContent();
+    }
 
-    const handleResize = () => {
-      if (chartContainerRef.current) {
-        chart.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-          height: chartContainerRef.current.clientHeight,
-        });
-      }
-    };
     window.addEventListener("resize", handleResize);
 
     return () => {
@@ -90,29 +91,5 @@ export default function NativeChart({
     };
   }, [data, colors]);
 
-  return (
-    <div className="w-full h-full flex flex-col">
-      {/* 차트 헤더 (기간 선택) */}
-      <div className="flex items-center justify-between px-1 pb-2 z-10">
-        <div className="flex space-x-1 rounded-lg">
-          {TIMEFRAMES.map((tf) => (
-            <button
-              key={tf}
-              onClick={() => onTimeframeChange(tf)}
-              className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
-                activeTimeframe === tf
-                  ? "text-blue-500 bg-blue-500/10"
-                  : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              }`}
-            >
-              {tf}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 차트 본체 */}
-      <div ref={chartContainerRef} className="flex-1 w-full min-h-0" />
-    </div>
-  );
+  return <div ref={chartContainerRef} className="w-full h-full" />;
 }
