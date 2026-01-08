@@ -14,18 +14,18 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body
-        className={`${inter.className} bg-[#0a0a0a] text-white min-h-screen`}
-      >
-        {/* Providers로 감싸기 */}
+      <body className="bg-black text-white min-h-screen">
         <Providers>
           <Header />
-          <main>{children}</main>
+          {/* 상단은 데스크탑 헤더 높이만큼, 하단은 모바일 메뉴 높이만큼 여백 확보 */}
+          <main className="pt-24 pb-28 md:pt-32 md:pb-10 px-4 max-w-7xl mx-auto">
+            {children}
+          </main>
           <Footer />
         </Providers>
       </body>
