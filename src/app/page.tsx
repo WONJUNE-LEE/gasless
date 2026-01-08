@@ -13,7 +13,19 @@ import {
   Layers,
   BarChart2,
   Droplets,
+  Wallet,
+  Route as RouteIcon, // 아이콘 추가
 } from "lucide-react";
+import {
+  useAccount,
+  useChainId,
+  useSwitchChain,
+  useBalance,
+  useReadContract,
+  useSendTransaction,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { erc20Abi } from "viem";
 
 import { okxApi, CHAINS, TokenInfo, NATIVE_TOKEN_ADDRESS } from "@/lib/api";
 import NativeChart from "@/components/dex/NativeChart";
@@ -36,6 +48,13 @@ const SLIPPAGE_OPTIONS = [
 ];
 
 export default function Home() {
+  // Wagmi Hooks
+  const { address, isConnected } = useAccount();
+  const walletChainId = useChainId();
+  const { switchChain } = useSwitchChain();
+  const { sendTransactionAsync } = useSendTransaction();
+
+  // State
   const [chainId, setChainId] = useState(42161);
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [tokenA, setTokenA] = useState<TokenInfo | null>(null);
@@ -48,6 +67,8 @@ export default function Home() {
   const [amount, setAmount] = useState("");
   const [quoteData, setQuoteData] = useState<any>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+
   const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
   const [limitPrice, setLimitPrice] = useState("");
@@ -59,43 +80,124 @@ export default function Home() {
     "chart" | "pay" | "receive" | null
   >(null);
 
-  // [수정 1] 헤더 검색 시 'chart' 모드(메인 토큰 변경)로 오픈
+  // Transaction State
+  const [isSwapping, setIsSwapping] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
+  const [needsApprove, setNeedsApprove] = useState(false);
+  const [dexRouterAddress, setDexRouterAddress] = useState<string | null>(null);
+
+  // Derived Variables
+  const displayTokenA = tokenA || PLACEHOLDER_TOKEN;
+  const displayTokenB = tokenB || PLACEHOLDER_TOKEN;
+  const currentPayToken = activeTab === "buy" ? displayTokenB : displayTokenA;
+  const currentReceiveToken =
+    activeTab === "buy" ? displayTokenA : displayTokenB;
+  const currentChain = CHAINS.find((c) => c.id === chainId) || CHAINS[0];
+
+  // 1. Balance Fetching
+  const { data: balanceData, refetch: refetchBalance } = useBalance({
+    address: address,
+    chainId: chainId,
+    token:
+      currentPayToken.isNative ||
+      currentPayToken.address === NATIVE_TOKEN_ADDRESS
+        ? undefined
+        : (currentPayToken.address as `0x${string}`),
+    query: {
+      enabled: !!address && !!currentPayToken,
+    },
+  });
+
+  // 2. Allowance Check
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: currentPayToken.address as `0x${string}`,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args:
+      address && dexRouterAddress
+        ? [address, dexRouterAddress as `0x${string}`]
+        : undefined,
+    query: {
+      enabled: !currentPayToken.isNative && !!address && !!dexRouterAddress,
+    },
+  });
+
+  // Transaction Receipt Waiting
+  const { isLoading: isTxConfirming, isSuccess: isTxSuccess } =
+    useWaitForTransactionReceipt({
+      hash: txHash,
+    });
+
+  // Reset State on Tx Success
   useEffect(() => {
+    if (isTxSuccess) {
+      setTxHash(undefined);
+      setIsSwapping(false);
+      setIsApproving(false);
+      refetchBalance();
+      refetchAllowance();
+      setAmount("");
+    }
+  }, [isTxSuccess, refetchBalance, refetchAllowance]);
+
+  // Sync Chain
+  useEffect(() => {
+    if (isConnected && walletChainId && walletChainId !== chainId) {
+      setChainId(walletChainId);
+    }
+  }, [isConnected, walletChainId]);
+
+  // Global Event Listeners
+  useEffect(() => {
+    const handleForceNetworkChange = (e: CustomEvent<number>) => {
+      const newChainId = e.detail;
+      if (newChainId !== chainId) {
+        setChainId(newChainId);
+        if (isConnected) {
+          switchChain({ chainId: newChainId });
+        }
+      }
+    };
+    window.addEventListener(
+      "force-network-change",
+      handleForceNetworkChange as any
+    );
     const handleOpenTokenSelector = () => setModalSource("chart");
     window.addEventListener("open-token-selector", handleOpenTokenSelector);
+
     return () => {
+      window.removeEventListener(
+        "force-network-change",
+        handleForceNetworkChange as any
+      );
       window.removeEventListener(
         "open-token-selector",
         handleOpenTokenSelector
       );
     };
-  }, []);
+  }, [chainId, isConnected, switchChain]);
 
-  // 1. 체인 초기화 로직
+  // Init Chain Tokens
   useEffect(() => {
     const initChain = async () => {
       const list = await okxApi.getTokens(chainId);
       setTokens(list);
-
       if (list.length > 0) {
         let nextA = tokenA;
-        // tokenA가 없거나 체인이 다르면 기본값 설정
         if (!nextA || nextA.chainId !== chainId) {
           nextA =
             list.find(
               (t) => t.isNative || t.symbol === "ETH" || t.symbol === "WETH"
             ) || list[0];
         }
-
         let nextB = tokenB;
-        // tokenB가 없거나 체인이 다르면 기본값 설정
         if (!nextB || nextB.chainId !== chainId) {
           nextB =
             list.find(
               (t) => t.symbol.includes("USD") && t.address !== nextA?.address
             ) || list[1];
         }
-
         setTokenA(nextA);
         setTokenB(nextB);
       }
@@ -104,7 +206,7 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chainId]);
 
-  // 2. 차트 로드
+  // Load Chart
   useEffect(() => {
     if (!tokenA) return;
     const loadChart = async () => {
@@ -124,57 +226,165 @@ export default function Home() {
       }));
       setChartData(formatted);
       setIsChartLoading(false);
-
-      if (tokenA.price && !limitPrice) {
-        setLimitPrice(tokenA.price);
-      }
+      if (tokenA.price && !limitPrice) setLimitPrice(tokenA.price);
     };
     loadChart();
   }, [tokenA, timeframe, chainId]);
 
-  // 3. 스왑 견적 요청
+  // Fetch Quote & Check Allowance
   useEffect(() => {
     if (!tokenA || !tokenB || !amount || parseFloat(amount) <= 0) {
       setQuoteData(null);
+      setDexRouterAddress(null);
+      setQuoteError(null);
       return;
     }
     if (orderType === "limit") return;
-
-    // [수정 2] 토큰 체인 ID 불일치 시(체인 변경 직후 등) 요청 방지
-    if (tokenA.chainId !== chainId || tokenB.chainId !== chainId) {
-      return;
-    }
+    if (tokenA.chainId !== chainId || tokenB.chainId !== chainId) return;
 
     const fetchQuote = async () => {
       setQuoteLoading(true);
-      const fromToken = activeTab === "buy" ? tokenB : tokenA;
-      const toToken = activeTab === "buy" ? tokenA : tokenB;
-      const weiAmount = toWei(amount, fromToken.decimals);
-      const targetSlippage = slippage === "auto" ? "0.005" : slippage;
+      setQuoteError(null);
+      try {
+        const fromToken = activeTab === "buy" ? tokenB : tokenA;
+        const toToken = activeTab === "buy" ? tokenA : tokenB;
+        const weiAmount = toWei(amount, fromToken.decimals);
+        const targetSlippage = slippage === "auto" ? "0.005" : slippage;
 
-      const data = await okxApi.getQuote({
-        chainId,
-        tokenIn: fromToken.address,
-        tokenOut: toToken.address,
-        amount: weiAmount,
-        slippage: targetSlippage,
-      });
+        const data = await okxApi.getQuote({
+          chainId,
+          tokenIn: fromToken.address,
+          tokenOut: toToken.address,
+          amount: weiAmount,
+          slippage: targetSlippage,
+        });
 
-      setQuoteData(data);
-      setQuoteLoading(false);
+        if (!data) throw new Error("No data received");
+        setQuoteData(data);
+
+        // Get Router Address
+        if (
+          !dexRouterAddress &&
+          !fromToken.isNative &&
+          fromToken.address !== NATIVE_TOKEN_ADDRESS
+        ) {
+          try {
+            const approveData = await okxApi.getApproveTransaction({
+              chainId,
+              tokenContractAddress: fromToken.address,
+              approveAmount: "1",
+            });
+            if (approveData?.dexContractAddress) {
+              setDexRouterAddress(approveData.dexContractAddress);
+            }
+          } catch (e) {
+            console.warn(
+              "Failed to fetch router address for allowance check",
+              e
+            );
+          }
+        }
+      } catch (error: any) {
+        console.error("Quote fetch failed:", error);
+        setQuoteError(error.message || "Failed to fetch quote");
+        setQuoteData(null);
+      } finally {
+        setQuoteLoading(false);
+      }
     };
 
     const timer = setTimeout(fetchQuote, 500);
     return () => clearTimeout(timer);
   }, [amount, tokenA, tokenB, activeTab, chainId, orderType, slippage]);
 
-  // 렌더링용 변수
-  const displayTokenA = tokenA || PLACEHOLDER_TOKEN;
-  const displayTokenB = tokenB || PLACEHOLDER_TOKEN;
-  const currentPayToken = activeTab === "buy" ? displayTokenB : displayTokenA;
-  const currentReceiveToken =
-    activeTab === "buy" ? displayTokenA : displayTokenB;
-  const currentChain = CHAINS.find((c) => c.id === chainId) || CHAINS[0];
+  // Calculate NeedsApprove
+  useEffect(() => {
+    if (
+      currentPayToken.isNative ||
+      currentPayToken.address === NATIVE_TOKEN_ADDRESS
+    ) {
+      setNeedsApprove(false);
+      return;
+    }
+    if (!allowance || !amount || !dexRouterAddress) {
+      setNeedsApprove(false);
+      return;
+    }
+    const amountWei = BigInt(toWei(amount, currentPayToken.decimals));
+    setNeedsApprove(allowance < amountWei);
+  }, [allowance, amount, currentPayToken, dexRouterAddress]);
+
+  // Handlers
+  const handleSelectToken = (token: TokenInfo) => {
+    if (token.chainId !== chainId) {
+      setChainId(token.chainId);
+      if (isConnected) switchChain({ chainId: token.chainId });
+    }
+    if (modalSource === "chart") setTokenA(token);
+    else if (modalSource === "pay")
+      activeTab === "buy" ? setTokenB(token) : setTokenA(token);
+    else if (modalSource === "receive")
+      activeTab === "buy" ? setTokenA(token) : setTokenB(token);
+    setModalSource(null);
+  };
+
+  const handleMax = () => {
+    if (balanceData) {
+      setAmount(balanceData.formatted);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!address || !currentPayToken || !amount) return;
+    setIsApproving(true);
+    try {
+      const weiAmount = toWei(amount, currentPayToken.decimals);
+      const data = await okxApi.getApproveTransaction({
+        chainId,
+        tokenContractAddress: currentPayToken.address,
+        approveAmount: weiAmount,
+      });
+
+      const hash = await sendTransactionAsync({
+        to: (data.tokenContractAddress ||
+          currentPayToken.address) as `0x${string}`,
+        data: data.data as `0x${string}`,
+        value: BigInt(0),
+      });
+      setTxHash(hash);
+    } catch (e) {
+      console.error("Approve Failed", e);
+      setIsApproving(false);
+    }
+  };
+
+  const handleSwap = async () => {
+    if (!address || !quoteData) return;
+    setIsSwapping(true);
+    try {
+      const weiAmount = toWei(amount, currentPayToken.decimals);
+      const targetSlippage = slippage === "auto" ? "0.005" : slippage;
+
+      const txData = await okxApi.getSwapTransaction({
+        chainId,
+        amount: weiAmount,
+        fromTokenAddress: currentPayToken.address,
+        toTokenAddress: currentReceiveToken.address,
+        userWalletAddress: address,
+        slippage: targetSlippage,
+      });
+
+      const hash = await sendTransactionAsync({
+        to: txData.to as `0x${string}`,
+        data: txData.data as `0x${string}`,
+        value: BigInt(txData.value || "0"),
+      });
+      setTxHash(hash);
+    } catch (e) {
+      console.error("Swap Failed", e);
+      setIsSwapping(false);
+    }
+  };
 
   const currentPrice = displayTokenA.price
     ? parseFloat(displayTokenA.price)
@@ -186,23 +396,6 @@ export default function Home() {
     ? parseFloat(currentPayToken.price)
     : 0;
   const totalCostValue = amount ? parseFloat(amount) * payTokenPrice : 0;
-
-  // 토큰 선택 핸들러
-  const handleSelectToken = (token: TokenInfo) => {
-    // 1. 체인이 다르면 체인 변경
-    if (token.chainId !== chainId) {
-      setChainId(token.chainId);
-    }
-    // 2. 모달 소스에 따라 토큰 업데이트
-    if (modalSource === "chart") {
-      setTokenA(token); // 메인 토큰 변경 (헤더 검색 등)
-    } else if (modalSource === "pay") {
-      activeTab === "buy" ? setTokenB(token) : setTokenA(token);
-    } else if (modalSource === "receive") {
-      activeTab === "buy" ? setTokenA(token) : setTokenB(token);
-    }
-    setModalSource(null);
-  };
 
   return (
     <div className="container mx-auto p-4 lg:p-8 max-w-7xl min-h-screen flex flex-col gap-6">
@@ -241,7 +434,6 @@ export default function Home() {
             </div>
           </button>
         </div>
-
         <div className="text-right mt-4 md:mt-0">
           <div className="text-4xl font-black tabular-nums tracking-tight text-white">
             {currentPrice > 0 ? `$${currentPrice.toLocaleString()}` : "---"}
@@ -263,7 +455,7 @@ export default function Home() {
 
       {/* 2. Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* [Left] Chart Area */}
+        {/* Left Chart */}
         <div className="lg:col-span-2 relative rounded-3xl overflow-hidden bg-white/5 border border-white/5 shadow-xl h-[650px] flex flex-col">
           <div className="flex justify-between items-start p-4 z-10">
             <div className="flex gap-4 text-xs font-medium text-gray-400">
@@ -286,7 +478,6 @@ export default function Home() {
                 </span>
               </div>
             </div>
-
             <div className="flex bg-black/30 rounded-lg p-1 border border-white/5 backdrop-blur-md">
               {["1H", "4H", "1D", "1W"].map((tf) => (
                 <button
@@ -303,7 +494,6 @@ export default function Home() {
               ))}
             </div>
           </div>
-
           <div className="flex-1 relative w-full">
             {isChartLoading ? (
               <div className="absolute inset-0 flex items-center justify-center text-gray-500 bg-black/20 backdrop-blur-sm z-10">
@@ -321,7 +511,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* [Right] Swap Panel */}
+        {/* Right Swap Panel */}
         <motion.div className="lg:col-span-1 glass-panel rounded-3xl p-6 flex flex-col relative overflow-hidden h-fit min-h-[600px]">
           <div
             className={`absolute -top-32 -right-32 w-64 h-64 rounded-full blur-[100px] opacity-15 pointer-events-none transition-colors duration-500 ${
@@ -345,7 +535,6 @@ export default function Home() {
                 </button>
               ))}
             </div>
-
             <div className="relative">
               <button
                 onClick={() => setShowSlippage(!showSlippage)}
@@ -389,33 +578,33 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col gap-2 relative z-10">
+            {/* YOU PAY */}
             <motion.div
               layout
               className={`input-well p-4 flex flex-col relative transition-colors hover:border-white/10 min-h-[170px] justify-center`}
             >
               <div className="flex justify-between text-xs font-bold text-gray-500 tracking-wide mb-4">
                 <span>YOU PAY</span>
-                <div className="flex gap-3">
-                  <span
-                    onClick={() => setOrderType("market")}
-                    className={`cursor-pointer transition-colors ${
-                      orderType === "market"
-                        ? "text-white"
-                        : "hover:text-gray-300"
-                    }`}
-                  >
-                    Market
-                  </span>
-                  <span
-                    onClick={() => setOrderType("limit")}
-                    className={`cursor-pointer transition-colors ${
-                      orderType === "limit"
-                        ? "text-white"
-                        : "hover:text-gray-300"
-                    }`}
-                  >
-                    Limit
-                  </span>
+                <div className="flex gap-2 items-center">
+                  <div className="flex items-center gap-1 text-gray-400">
+                    <Wallet className="w-3 h-3" />
+                    <span>
+                      {balanceData
+                        ? parseFloat(balanceData.formatted).toLocaleString(
+                            undefined,
+                            { maximumFractionDigits: 4 }
+                          )
+                        : "0"}
+                    </span>
+                  </div>
+                  {balanceData && (
+                    <button
+                      onClick={handleMax}
+                      className="text-blue-400 hover:text-blue-300 transition-colors uppercase text-[10px] bg-blue-500/10 px-1.5 py-0.5 rounded"
+                    >
+                      Max
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -444,41 +633,24 @@ export default function Home() {
                   <ChevronDown className="w-3 h-3 opacity-50 text-white" />
                 </button>
               </div>
-
-              <AnimatePresence>
-                {orderType === "limit" && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="pt-4 mt-2 border-t border-white/5 flex justify-between items-center">
-                      <span className="text-xs text-blue-400 font-bold">
-                        Target Price
-                      </span>
-                      <input
-                        type="number"
-                        placeholder={displayTokenA.price || "0"}
-                        value={limitPrice}
-                        onChange={(e) => setLimitPrice(e.target.value)}
-                        className="bg-transparent text-right text-sm font-bold outline-none text-white w-1/2"
-                      />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </motion.div>
 
+            {/* Separator */}
             <div className="flex justify-center -my-5 relative z-20 pointer-events-none">
               <div className="bg-[#1a1c23] border border-white/10 p-2 rounded-xl text-gray-400 shadow-xl">
                 <ArrowRightLeft className="w-4 h-4 rotate-90 text-white" />
               </div>
             </div>
 
+            {/* YOU RECEIVE */}
             <div className="input-well p-4 flex flex-col gap-3 pt-6 min-h-[110px] justify-center">
               <div className="text-xs font-bold text-gray-500 tracking-wide">
                 YOU RECEIVE
+                {quoteError && (
+                  <span className="ml-2 text-red-500 font-normal">
+                    ({quoteError})
+                  </span>
+                )}
               </div>
               <div className="flex justify-between items-center gap-2">
                 <div className="text-3xl font-bold text-white tabular-nums truncate">
@@ -487,9 +659,7 @@ export default function Home() {
                       Calculating...
                     </span>
                   ) : quoteData ? (
-                    parseFloat(
-                      fromWei(quoteData.dstAmount, currentReceiveToken.decimals)
-                    ).toLocaleString(undefined, { maximumFractionDigits: 6 })
+                    fromWei(quoteData.dstAmount, currentReceiveToken.decimals)
                   ) : (
                     "0"
                   )}
@@ -520,7 +690,7 @@ export default function Home() {
                 <span>Rate</span>
                 <span className="text-gray-300">
                   1 {currentPayToken.symbol} ≈{" "}
-                  {quoteData && amount
+                  {quoteData && amount && parseFloat(amount) > 0
                     ? (
                         parseFloat(
                           fromWei(
@@ -531,6 +701,14 @@ export default function Home() {
                       ).toLocaleString()
                     : "-"}{" "}
                   {currentReceiveToken.symbol}
+                </span>
+              </div>
+              {/* [추가] Order Route 표시 */}
+              <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
+                <span>Order Route</span>
+                <span className="text-gray-300 truncate max-w-[150px] flex items-center gap-1">
+                  <RouteIcon className="w-3 h-3" />
+                  {quoteData?.router || "Best Route"}
                 </span>
               </div>
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
@@ -583,13 +761,44 @@ export default function Home() {
               </div>
             </div>
 
-            <button
-              className={`w-full py-4 rounded-xl text-lg font-black flex justify-center items-center gap-2 shadow-lg active:scale-[0.98] transition-transform ${
-                activeTab === "buy" ? "btn-buy" : "btn-sell"
-              }`}
-            >
-              {activeTab === "buy" ? "BUY" : "SELL"} {displayTokenA.symbol}
-            </button>
+            {isTxConfirming || isSwapping || isApproving ? (
+              <button
+                disabled
+                className="w-full py-4 rounded-xl text-lg font-black flex justify-center items-center gap-2 shadow-lg bg-gray-700 text-gray-400 cursor-not-allowed"
+              >
+                <Loader2 className="animate-spin w-5 h-5" />
+                {isTxConfirming
+                  ? "Confirming..."
+                  : isApproving
+                  ? "Approving..."
+                  : "Swapping..."}
+              </button>
+            ) : !isConnected ? (
+              <button className="w-full py-4 rounded-xl text-lg font-black bg-blue-600 text-white shadow-lg">
+                Connect Wallet
+              </button>
+            ) : needsApprove ? (
+              <button
+                onClick={handleApprove}
+                className="w-full py-4 rounded-xl text-lg font-black bg-yellow-500 hover:bg-yellow-600 text-black shadow-lg transition-all"
+              >
+                Approve {currentPayToken.symbol}
+              </button>
+            ) : (
+              <button
+                onClick={handleSwap}
+                disabled={!quoteData || !amount || !!quoteError}
+                className={`w-full py-4 rounded-xl text-lg font-black flex justify-center items-center gap-2 shadow-lg active:scale-[0.98] transition-transform ${
+                  activeTab === "buy" ? "btn-buy" : "btn-sell"
+                } ${
+                  !quoteData || !amount || !!quoteError
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
+              >
+                {activeTab === "buy" ? "BUY" : "SELL"} {displayTokenA.symbol}
+              </button>
+            )}
           </div>
         </motion.div>
       </div>

@@ -75,6 +75,13 @@ export default function Header() {
     console.log("Selected Token:", token);
     setSelectedToken(token);
     setIsSearchOpen(false);
+
+    // [수정] 메인 페이지에 네트워크 변경 및 차트 토큰 변경 알림
+    window.dispatchEvent(
+      new CustomEvent("force-network-change", { detail: token.chainId })
+    );
+    // 선택된 토큰을 메인 페이지 차트에 반영하기 위해 기존 이벤트도 함께 발송 (선택적)
+    window.dispatchEvent(new CustomEvent("open-token-selector"));
   };
 
   // 현재 선택된 체인의 아이콘 가져오기 (지갑 미연결 시 사용)
@@ -90,7 +97,7 @@ export default function Header() {
       {/* ===========================================
         [데스크탑] 다이내믹 아일랜드 스타일
       =========================================== */}
-      <header className="hidden md:flex fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[1220px] px-4 transition-all duration-300">
+      <header className="hidden md:flex fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[1240px] px-4 transition-all duration-300">
         <div className="w-full flex items-center justify-between bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-full px-6 py-3">
           {/* 좌측: 로고 & 네비게이션 */}
           <div className="flex items-center gap-6">
@@ -181,7 +188,7 @@ export default function Header() {
 
                       return (
                         <div className="flex items-center gap-2">
-                          {/* [수정] 네트워크 버튼: 로고 + 텍스트 */}
+                          {/* 네트워크 버튼 */}
                           <button
                             onClick={openChainModal}
                             className="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold bg-black/40 text-white border border-white/10 hover:bg-white/10 transition-all shadow-lg"
@@ -205,7 +212,6 @@ export default function Header() {
                                 )}
                               </div>
                             )}
-                            {/* 네트워크 이름 표시 */}
                             <span className="hidden lg:block">
                               {chain.name}
                             </span>
@@ -256,7 +262,7 @@ export default function Header() {
             : "bottom-6 opacity-100"
         }`}
       >
-        <div className="flex items-center justify-between bg-white/15 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-full px-3 py-2.5">
+        <div className="flex items-center justify-between bg-white/15 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-2xl px-3 py-2">
           <div className="flex items-center gap-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
@@ -265,13 +271,18 @@ export default function Header() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex flex-col items-center justify-center w-10 h-10 rounded-full transition-all ${
+                  // [수정] 텍스트 추가를 위해 너비 자동, Flex-col 구조, 패딩 조정
+                  className={`flex flex-col items-center justify-center px-4 py-1.5 rounded-xl transition-all gap-1 ${
                     isActive
                       ? "bg-white text-black shadow-sm"
                       : "text-white/70 hover:bg-white/10"
                   }`}
                 >
                   <Icon className="w-5 h-5" />
+                  {/* [수정] 부활한 텍스트 라벨 */}
+                  <span className="text-[10px] font-bold tracking-tight">
+                    {item.name}
+                  </span>
                 </Link>
               );
             })}
@@ -328,30 +339,40 @@ export default function Header() {
                     }
 
                     return (
-                      <button
-                        onClick={openAccountModal}
-                        className="flex-1 flex items-center justify-center gap-2 h-10 rounded-full px-3 font-bold text-xs bg-black/40 text-white border border-white/10 shadow-md min-w-0"
-                      >
-                        {/* [수정] 모바일에서도 로고 + 텍스트 표시 */}
-                        {chain.hasIcon && chain.iconUrl && (
-                          <div className="shrink-0">
+                      <div className="flex items-center gap-2 w-full justify-end">
+                        {/* [수정] 네트워크 버튼: 로고만 표시 (텍스트 제거), 지갑 버튼 왼쪽에 배치 */}
+                        <button
+                          onClick={openChainModal}
+                          className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 border border-white/10 shadow-md shrink-0"
+                        >
+                          {chain.hasIcon && chain.iconUrl ? (
                             <img
                               alt={chain.name ?? "Chain icon"}
                               src={chain.iconUrl}
-                              className="w-4 h-4 rounded-full"
+                              className="w-5 h-5 rounded-full"
                             />
+                          ) : (
+                            <div className="w-5 h-5 bg-gray-600 rounded-full text-[8px] flex items-center justify-center">
+                              ?
+                            </div>
+                          )}
+                        </button>
+
+                        {/* 계정 버튼 */}
+                        <button
+                          onClick={openAccountModal}
+                          className="flex-1 flex items-center justify-center gap-2 h-10 rounded-full px-3 font-bold text-xs bg-black/40 text-white border border-white/10 shadow-md min-w-0"
+                        >
+                          <div className="flex flex-col items-start leading-none min-w-0 truncate">
+                            <span className="text-[10px] text-white/70 truncate w-full">
+                              Connected
+                            </span>
+                            <span className="truncate w-full">
+                              {account.displayName}
+                            </span>
                           </div>
-                        )}
-                        {/* 모바일 화면 좁을 수 있으므로 truncate 적용 */}
-                        <div className="flex flex-col items-start leading-none min-w-0 truncate">
-                          <span className="text-[10px] text-white/70 truncate w-full">
-                            {chain.name}
-                          </span>
-                          <span className="truncate w-full">
-                            {account.displayName}
-                          </span>
-                        </div>
-                      </button>
+                        </button>
+                      </div>
                     );
                   })()}
                 </div>

@@ -55,7 +55,6 @@ export const CHAINS: ChainConfig[] = [
     id: 8453,
     name: "Base",
     symbol: "ETH",
-    // [수정] Base 로고 URL 업데이트 (TrustWallet Assets)
     logo: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png",
     slug: "base",
     wrappedTokenAddress: "0x4200000000000000000000000000000000000006",
@@ -72,7 +71,6 @@ export const CHAINS: ChainConfig[] = [
     id: 143,
     name: "Monad",
     symbol: "MON",
-    // [수정] Monad 로고 (공식 소셜 이미지 혹은 로컬 파일 사용 권장. 여기선 작동 가능한 URL로 대체)
     logo: "https://raw.githubusercontent.com/monad-foundation/media-kit/main/Logos/Monad_Logo_Circle.png",
     slug: "monad",
     wrappedTokenAddress: "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A",
@@ -82,7 +80,6 @@ export const CHAINS: ChainConfig[] = [
 export const NATIVE_TOKEN_ADDRESS =
   "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 
-// ... (TokenInfo 인터페이스 및 okxApi 객체는 기존과 동일하게 유지)
 export interface TokenInfo {
   chainId: number;
   address: string;
@@ -99,7 +96,6 @@ export interface TokenInfo {
 }
 
 export const okxApi = {
-  // 1. 토큰 리스트 (가격 정보 포함)
   getTokens: async (
     chainId: number,
     query: string = ""
@@ -115,7 +111,6 @@ export const okxApi = {
     }
   },
 
-  // 2. 차트 데이터
   getCandles: async (
     chainId: number,
     tokenAddress: string,
@@ -132,7 +127,6 @@ export const okxApi = {
     }
   },
 
-  // 3. 스왑 견적
   getQuote: async (params: {
     chainId: number;
     tokenIn: string;
@@ -144,11 +138,60 @@ export const okxApi = {
       const url = `/api/quote?chainId=${params.chainId}&tokenIn=${params.tokenIn}&tokenOut=${params.tokenOut}&amount=${params.amount}`;
       const res = await fetch(url);
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      if (data.error) {
+        // 상세 에러 내용을 포함하여 에러 발생
+        throw new Error(
+          `${data.error}${data.details ? ": " + data.details : ""}`
+        );
+      }
       return data;
     } catch (e) {
       console.error("getQuote error:", e);
-      return null;
+      throw e; // 호출부에서 잡을 수 있게 다시 throw
     }
+  },
+
+  getSwapTransaction: async (params: {
+    chainId: number;
+    amount: string;
+    fromTokenAddress: string;
+    toTokenAddress: string;
+    userWalletAddress: string;
+    slippage: string;
+  }) => {
+    const query = new URLSearchParams({
+      chainId: params.chainId.toString(),
+      amount: params.amount,
+      fromTokenAddress: params.fromTokenAddress,
+      toTokenAddress: params.toTokenAddress,
+      userWalletAddress: params.userWalletAddress,
+      slippage: params.slippage,
+    });
+    const res = await fetch(`/api/swap?${query.toString()}`);
+    const data = await res.json();
+    if (data.error)
+      throw new Error(
+        `${data.error}${data.details ? ": " + data.details : ""}`
+      );
+    return data;
+  },
+
+  getApproveTransaction: async (params: {
+    chainId: number;
+    tokenContractAddress: string;
+    approveAmount: string;
+  }) => {
+    const query = new URLSearchParams({
+      chainId: params.chainId.toString(),
+      tokenContractAddress: params.tokenContractAddress,
+      approveAmount: params.approveAmount,
+    });
+    const res = await fetch(`/api/approve?${query.toString()}`);
+    const data = await res.json();
+    if (data.error)
+      throw new Error(
+        `${data.error}${data.details ? ": " + data.details : ""}`
+      );
+    return data;
   },
 };
