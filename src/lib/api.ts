@@ -7,7 +7,7 @@ export interface ChainConfig {
   symbol: string;
   logo: string;
   slug: string;
-  wrappedTokenAddress: string; // [추가] 네이티브 토큰 변환용
+  wrappedTokenAddress: string;
 }
 
 export const CHAINS: ChainConfig[] = [
@@ -55,7 +55,8 @@ export const CHAINS: ChainConfig[] = [
     id: 8453,
     name: "Base",
     symbol: "ETH",
-    logo: "https://assets.coingecko.com/coins/images/31199/small/base.png",
+    // [수정] Base 로고 URL 업데이트 (TrustWallet Assets)
+    logo: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png",
     slug: "base",
     wrappedTokenAddress: "0x4200000000000000000000000000000000000006",
   },
@@ -67,12 +68,12 @@ export const CHAINS: ChainConfig[] = [
     slug: "avalanche",
     wrappedTokenAddress: "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7",
   },
-  // Monad 등 OKX 미지원 체인은 확인 필요, 임시 유지
   {
     id: 143,
     name: "Monad",
     symbol: "MON",
-    logo: "https://assets.coingecko.com/coins/images/33059/small/monad.png",
+    // [수정] Monad 로고 (공식 소셜 이미지 혹은 로컬 파일 사용 권장. 여기선 작동 가능한 URL로 대체)
+    logo: "https://raw.githubusercontent.com/monad-foundation/media-kit/main/Logos/Monad_Logo_Circle.png",
     slug: "monad",
     wrappedTokenAddress: "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A",
   },
@@ -81,6 +82,7 @@ export const CHAINS: ChainConfig[] = [
 export const NATIVE_TOKEN_ADDRESS =
   "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 
+// ... (TokenInfo 인터페이스 및 okxApi 객체는 기존과 동일하게 유지)
 export interface TokenInfo {
   chainId: number;
   address: string;
@@ -93,7 +95,7 @@ export interface TokenInfo {
   volume24h?: string;
   liquidity?: string;
   marketCap?: string;
-  isNative?: boolean; // [추가] 네이티브 여부 식별
+  isNative?: boolean;
 }
 
 export const okxApi = {
