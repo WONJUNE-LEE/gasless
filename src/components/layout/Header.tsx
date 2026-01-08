@@ -3,10 +3,31 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
-import { Search, Wallet, User, ArrowRightLeft, Coins, X } from "lucide-react";
-import { ConnectButton } from "@rainbow-me/rainbowkit"; // RainbowKit 가져오기
+import { Search, Wallet, User, ArrowRightLeft, Coins } from "lucide-react";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import TokenSelector from "@/components/dex/TokenSelector";
 import { TokenInfo } from "@/lib/api";
+
+// 체인 메타데이터 매핑 (아이콘 등)
+const CHAIN_METADATA: Record<number, { name: string; icon: React.ReactNode }> =
+  {
+    80085: {
+      name: "Berachain Artio",
+      icon: (
+        <div className="w-5 h-5 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-sm">
+          B
+        </div>
+      ),
+    },
+    // 다른 체인 추가 가능
+  };
+
+// 기본 체인 아이콘 (매핑된 것이 없을 때 사용)
+const DefaultChainIcon = () => (
+  <div className="w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center text-white text-[8px]">
+    UNK
+  </div>
+);
 
 // 스크롤 감지 훅
 function useScrollDirection() {
@@ -56,12 +77,33 @@ export default function Header() {
     setIsSearchOpen(false);
   };
 
+  // 현재 선택된 체인의 아이콘 가져오기
+  const getCurrentChainIcon = (walletChainIconUrl?: string) => {
+    // 1. 직접 정의된 메타데이터가 있으면 우선 사용 (Berachain 등)
+    if (CHAIN_METADATA[selectedChainId]) {
+      return CHAIN_METADATA[selectedChainId].icon;
+    }
+    // 2. 지갑이 연결되어 있고, 지갑의 체인이 현재 선택된 체인과 같다면 지갑 제공 아이콘 사용
+    if (walletChainIconUrl) {
+      return (
+        <img
+          src={walletChainIconUrl}
+          alt="Chain"
+          className="w-5 h-5 rounded-full"
+        />
+      );
+    }
+    // 3. 기본 아이콘
+    return <DefaultChainIcon />;
+  };
+
   return (
     <>
       {/* ===========================================
         [데스크탑] 다이내믹 아일랜드 스타일
       =========================================== */}
-      <header className="hidden md:flex fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-5xl px-4 transition-all duration-300">
+      {/* 수정: max-w-7xl(1280px) 대신 max-w-[1260px]를 사용하여 스크롤바 너비만큼의 오차 보정 시도 */}
+      <header className="hidden md:flex fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[1220px] px-4 transition-all duration-300">
         <div className="w-full flex items-center justify-between bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-full px-6 py-3">
           {/* 좌측: 로고 & 네비게이션 */}
           <div className="flex items-center gap-6">
@@ -114,6 +156,9 @@ export default function Header() {
                 const ready = mounted;
                 const connected = ready && account && chain;
 
+                // 현재 선택된 체인 아이콘 (지갑 연결 여부와 상관없이 selectedChainId 기준)
+                const currentChainIcon = getCurrentChainIcon(chain?.iconUrl);
+
                 return (
                   <div
                     {...(!ready && {
@@ -152,25 +197,15 @@ export default function Header() {
 
                       return (
                         <>
-                          {/* 연결됨: 지갑 잔액/주소 표시 */}
                           <button
                             onClick={openAccountModal}
                             className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all shadow-lg"
                           >
-                            {/* 체인 아이콘 (있으면 표시) */}
-                            {chain.hasIcon && chain.iconUrl && (
-                              <img
-                                alt={chain.name ?? "Chain icon"}
-                                src={chain.iconUrl}
-                                className="w-5 h-5 rounded-full"
-                              />
-                            )}
-                            <span>{account.displayName}</span>
-                          </button>
+                            {/* 네트워크 아이콘: selectedChainId 기반 */}
+                            <div className="mr-1">{currentChainIcon}</div>
 
-                          {/* 연결된 상태에서만 보이는 내 프로필 버튼 */}
-                          <button className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/10 transition-all shadow-md">
-                            <User className="w-5 h-5" />
+                            <span>{account.displayName}</span>
+                            <User className="w-4 h-4 ml-1 opacity-70" />
                           </button>
                         </>
                       );
@@ -187,7 +222,6 @@ export default function Header() {
         [모바일] 상단 헤더 + 하단 플로팅 메뉴
       =========================================== */}
 
-      {/* 1. 모바일 상단: 로고 & 검색 */}
       <header className="md:hidden fixed top-0 left-0 w-full z-40 bg-black/80 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center justify-between gap-4">
         <Link href="/">
           <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-md">
@@ -203,7 +237,6 @@ export default function Header() {
         </button>
       </header>
 
-      {/* 2. 모바일 하단: 플로팅 메뉴 */}
       <nav
         className={`md:hidden fixed left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-sm transition-all duration-500 ease-in-out ${
           scrollDirection === "down"
@@ -211,7 +244,7 @@ export default function Header() {
             : "bottom-6 opacity-100"
         }`}
       >
-        <div className="flex items-center justify-between bg-white/15 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-2xl px-3 py-2.5">
+        <div className="flex items-center justify-between bg-white/15 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-full px-4 py-2.5">
           <div className="flex items-center gap-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
@@ -220,16 +253,13 @@ export default function Header() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex flex-col items-center justify-center w-14 h-12 rounded-xl transition-all ${
+                  className={`flex flex-col items-center justify-center w-12 h-12 rounded-full transition-all ${
                     isActive
                       ? "bg-white text-black shadow-sm"
                       : "text-white/70 hover:bg-white/10"
                   }`}
                 >
                   <Icon className="w-5 h-5" />
-                  <span className="text-[10px] font-medium mt-0.5">
-                    {item.name}
-                  </span>
                 </Link>
               );
             })}
@@ -237,7 +267,6 @@ export default function Header() {
 
           <div className="w-px h-8 bg-white/20 mx-2"></div>
 
-          {/* 모바일 지갑 연결 (RainbowKit Custom Button 적용) */}
           <ConnectButton.Custom>
             {({
               account,
@@ -249,6 +278,9 @@ export default function Header() {
             }) => {
               const ready = mounted;
               const connected = ready && account && chain;
+
+              // 모바일에서도 동일하게 적용
+              const currentChainIcon = getCurrentChainIcon(chain?.iconUrl);
 
               return (
                 <div
@@ -267,7 +299,7 @@ export default function Header() {
                       return (
                         <button
                           onClick={openConnectModal}
-                          className="flex-1 flex items-center justify-center gap-2 h-12 rounded-xl px-4 font-bold text-xs bg-white text-black shadow-md transition-colors"
+                          className="flex-1 flex items-center justify-center gap-2 h-12 rounded-full px-4 font-bold text-xs bg-white text-black shadow-md transition-colors"
                         >
                           <Wallet className="w-4 h-4" />
                           <span>Connect</span>
@@ -279,7 +311,7 @@ export default function Header() {
                       return (
                         <button
                           onClick={openChainModal}
-                          className="flex-1 h-12 rounded-xl px-2 font-bold text-xs bg-red-500 text-white shadow-md"
+                          className="flex-1 h-12 rounded-full px-2 font-bold text-xs bg-red-500 text-white shadow-md"
                         >
                           Wrong Net
                         </button>
@@ -290,15 +322,14 @@ export default function Header() {
                       <>
                         <button
                           onClick={openAccountModal}
-                          className="flex-1 flex items-center justify-center gap-2 h-12 rounded-xl px-3 font-bold text-xs bg-black/40 text-white border border-white/10 shadow-md truncate"
+                          className="flex-1 flex items-center justify-center gap-2 h-12 rounded-full px-3 font-bold text-xs bg-black/40 text-white border border-white/10 shadow-md truncate"
                         >
-                          {/* 모바일에서는 아이콘 없이 텍스트만 깔끔하게 혹은 필요시 추가 */}
+                          {/* 모바일 네트워크 아이콘 추가 */}
+                          <div className="mr-1 scale-90">
+                            {currentChainIcon}
+                          </div>
                           <span>{account.displayName}</span>
-                        </button>
-
-                        {/* 연결 시에만 보이는 내 정보 버튼 */}
-                        <button className="w-12 h-12 flex items-center justify-center rounded-xl bg-white/10 text-white border border-white/10 shrink-0">
-                          <User className="w-5 h-5" />
+                          <User className="w-4 h-4 ml-1 opacity-70" />
                         </button>
                       </>
                     );
@@ -310,9 +341,6 @@ export default function Header() {
         </div>
       </nav>
 
-      {/* ===========================================
-        [공통] Token Selector
-      =========================================== */}
       <TokenSelector
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
