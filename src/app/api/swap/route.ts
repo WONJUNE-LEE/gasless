@@ -36,7 +36,7 @@ export async function GET(request: Request) {
   const fromTokenAddress = searchParams.get("fromTokenAddress");
   const toTokenAddress = searchParams.get("toTokenAddress");
   const userWalletAddress = searchParams.get("userWalletAddress");
-  const slippage = searchParams.get("slippage") || "0.005";
+  const slippage = searchParams.get("slippage") || "0.5";
 
   if (
     !chainId ||

@@ -42,9 +42,9 @@ const PLACEHOLDER_TOKEN: TokenInfo = {
 
 const SLIPPAGE_OPTIONS = [
   { label: "Auto", value: "auto" },
-  { label: "0.1%", value: "0.001" },
-  { label: "0.5%", value: "0.005" },
-  { label: "1.0%", value: "0.01" },
+  { label: "0.1%", value: "0.1" }, // 기존 "0.001" -> "0.1"
+  { label: "0.5%", value: "0.5" }, // 기존 "0.005" -> "0.5"
+  { label: "1.0%", value: "1.0" }, // 기존 "0.01"  -> "1.0"
 ];
 
 export default function Home() {

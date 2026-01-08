@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       amount: amount,
       fromTokenAddress: tokenIn,
       toTokenAddress: tokenOut,
-      slippage: slippage, // [추가] OKX API에 슬리피지 전달
+      priceImpactProtectionPercent: "100",
     });
 
     const queryString = "?" + queryParams.toString();

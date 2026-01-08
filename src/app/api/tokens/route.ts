@@ -4,11 +4,17 @@ import { CHAINS, NATIVE_TOKEN_ADDRESS } from "@/lib/api";
 
 const OKX_API_URL = "https://web3.okx.com";
 
-// 서버 캐시 설정 (5분)
+// 캐시 설정: 메타데이터(소수점 등)는 오래, 랭킹 정보는 짧게
+const decimalsCache = new Map<
+  string,
+  { data: Map<string, number>; timestamp: number }
+>();
 const topTokensCache = new Map<string, { data: any[]; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000;
 
-// OKX 헤더 생성 함수
+const DECIMALS_CACHE_DURATION = 60 * 60 * 1000; // 1시간 (변동 적음)
+const TOPLIST_CACHE_DURATION = 2 * 60 * 1000; // 2분 (가격 변동)
+
+// OKX 헤더 생성
 function generateOkxHeaders(
   method: string,
   requestPath: string,
@@ -34,19 +40,18 @@ function generateOkxHeaders(
   };
 }
 
-// 재시도 로직이 포함된 Fetch 함수
-async function fetchOkxWithRetry(url: string, headers: any, retries = 3) {
+async function fetchOkxWithRetry(url: string, headers: any, retries = 2) {
   for (let i = 0; i < retries; i++) {
     try {
-      const res = await fetch(url, { method: "GET", headers });
+      const res = await fetch(url, {
+        method: "GET",
+        headers,
+        next: { revalidate: 0 },
+      });
       if (res.ok) return res;
-      // 4xx, 5xx 에러 발생 시 에러 throw
-      if (res.status >= 400) {
-        throw new Error(`OKX Client Error: ${res.status}`);
-      }
     } catch (e) {
       if (i === retries - 1) throw e;
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 500));
     }
   }
   throw new Error("OKX API Failed");
@@ -57,17 +62,66 @@ export async function GET(request: Request) {
   const chainId = searchParams.get("chainId") || "1";
   const query = searchParams.get("q");
 
-  // 현재 체인 정보 및 Wrapped Token 주소 찾기 (소문자 비교)
   const currentChain = CHAINS.find((c) => c.id === parseInt(chainId));
   const wrappedAddress = currentChain?.wrappedTokenAddress?.toLowerCase();
 
   try {
-    let rawTokens: any[] = [];
+    // ---------------------------------------------------------
+    // [Step 1] Decimals 정보 확보 (All-Tokens API 이용)
+    // ---------------------------------------------------------
+    let decimalsMap = new Map<string, number>();
+    const decimalsCacheKey = `decimals_${chainId}`;
+    const cachedDecimals = decimalsCache.get(decimalsCacheKey);
+
+    if (
+      cachedDecimals &&
+      Date.now() - cachedDecimals.timestamp < DECIMALS_CACHE_DURATION
+    ) {
+      decimalsMap = cachedDecimals.data;
+    } else {
+      // decimals 정보를 얻기 위해 aggregator/all-tokens 호출
+      const endpoint = "/api/v6/dex/aggregator/all-tokens";
+      const queryParams = new URLSearchParams({ chainIndex: chainId });
+      const queryString = "?" + queryParams.toString();
+      const headers = generateOkxHeaders("GET", endpoint, queryString);
+
+      try {
+        const res = await fetchOkxWithRetry(
+          `${OKX_API_URL}${endpoint}${queryString}`,
+          headers
+        );
+        const data = await res.json();
+
+        if (data.code === "0" && data.data) {
+          data.data.forEach((t: any) => {
+            if (t.tokenContractAddress && t.decimals) {
+              decimalsMap.set(
+                t.tokenContractAddress.toLowerCase(),
+                parseInt(t.decimals)
+              );
+            }
+          });
+          // 캐시 업데이트
+          decimalsCache.set(decimalsCacheKey, {
+            data: decimalsMap,
+            timestamp: Date.now(),
+          });
+        }
+      } catch (e) {
+        console.warn(
+          "Failed to fetch all-tokens for decimals, defaulting to 18",
+          e
+        );
+      }
+    }
 
     // ---------------------------------------------------------
-    // 1. 검색 모드 (Search API)
+    // [Step 2] 토큰 리스트 확보 (Toplist 또는 Search API)
     // ---------------------------------------------------------
+    let rawTokens: any[] = [];
+
     if (query) {
+      // 검색 모드
       const endpoint = "/api/v6/dex/market/token/search";
       const queryParams = new URLSearchParams({
         chains: chainId,
@@ -75,114 +129,93 @@ export async function GET(request: Request) {
       });
       const queryString = "?" + queryParams.toString();
       const headers = generateOkxHeaders("GET", endpoint, queryString);
-
       const res = await fetchOkxWithRetry(
         `${OKX_API_URL}${endpoint}${queryString}`,
         headers
       );
       const data = await res.json();
-
-      if (data.code !== "0") throw new Error(data.msg);
       rawTokens = data.data || [];
-    }
-    // ---------------------------------------------------------
-    // 2. 상위 토큰 리스트 모드 (Toplist API)
-    // ---------------------------------------------------------
-    else {
+    } else {
+      // 랭킹 모드 (Toplist API - 가격, 변동률 포함됨)
       const cacheKey = `top_${chainId}`;
-      const cached = topTokensCache.get(cacheKey);
+      const cachedTop = topTokensCache.get(cacheKey);
 
-      // 캐시 유효하면 반환
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return NextResponse.json(cached.data);
+      if (
+        cachedTop &&
+        Date.now() - cachedTop.timestamp < TOPLIST_CACHE_DURATION
+      ) {
+        return NextResponse.json(cachedTop.data);
       }
 
-      // v6 Toplist API (SortBy 6: MarketCap, TimeFrame 4: 24h)
       const endpoint = "/api/v6/dex/market/token/toplist";
       const queryParams = new URLSearchParams({
         chains: chainId,
-        sortBy: "6", // 시가총액 기준 정렬
-        timeFrame: "4",
+        sortBy: "6", // MarketCap 순
+        timeFrame: "4", // 24h
       });
       const queryString = "?" + queryParams.toString();
       const headers = generateOkxHeaders("GET", endpoint, queryString);
-
       const res = await fetchOkxWithRetry(
         `${OKX_API_URL}${endpoint}${queryString}`,
         headers
       );
       const data = await res.json();
-
-      if (data.code !== "0") throw new Error(data.msg);
       rawTokens = data.data || [];
     }
 
     // ---------------------------------------------------------
-    // 3. 데이터 매핑 및 네이티브 토큰 변환
+    // [Step 3] 데이터 병합 (Toplist 정보 + Decimals Map)
     // ---------------------------------------------------------
     let mappedTokens = rawTokens.map((t: any) => {
       const tokenAddr = t.tokenContractAddress.toLowerCase();
       let isNative = false;
 
-      // [핵심] Wrapped Token 주소와 일치하면 Native Token으로 변환
       let finalAddress = t.tokenContractAddress;
       let finalName = t.tokenName;
       let finalSymbol = t.tokenSymbol;
 
+      // Native Token 처리
       if (wrappedAddress && tokenAddr === wrappedAddress) {
-        finalAddress = NATIVE_TOKEN_ADDRESS; // 0xeeee...
+        finalAddress = NATIVE_TOKEN_ADDRESS;
         finalName = currentChain?.name || "Native Token";
         finalSymbol = currentChain?.symbol || "ETH";
         isNative = true;
       }
+
+      // [핵심] Decimals 찾기: Map에 있으면 사용, 없으면 Toplist의 decimal, 그것도 없으면 18
+      const exactDecimal = decimalsMap.get(tokenAddr);
+      const fallbackDecimal = t.decimal || t.decimals || "18";
+      const finalDecimal =
+        exactDecimal !== undefined ? exactDecimal : parseInt(fallbackDecimal);
 
       return {
         chainId: parseInt(chainId),
         address: finalAddress,
         name: finalName,
         symbol: finalSymbol,
-        decimals: parseInt(t.decimal || t.decimals || "18"),
+        decimals: finalDecimal, // 정확한 소수점 적용
         logoURI: t.tokenLogoUrl || t.logoUrl || "",
         price: t.price || t.tokenUnitPrice || "0",
-        change24h: t.change || t.change24H || "0",
+        change24h: t.change || t.change24H || "0", // Toplist의 가격 변동률 적용
         volume24h: t.volume || t.vol24h || "0",
         liquidity: t.liquidity || "0",
         marketCap: t.marketCap || "0",
         isNative: isNative,
-        // 원본 유동성 값 보존 (정렬용)
-        rawLiquidity: parseFloat(t.liquidity || "0"),
         rawMarketCap: parseFloat(t.marketCap || "0"),
       };
     });
 
-    // ---------------------------------------------------------
-    // 4. 중복 제거 (address 기준)
-    // ---------------------------------------------------------
+    // 중복 제거
     const uniqueTokensMap = new Map();
-
     mappedTokens.forEach((token: any) => {
-      // 이미 존재하는 주소면 건너뜀 (리스트 순서상 상위 항목 우선)
       if (!uniqueTokensMap.has(token.address)) {
         uniqueTokensMap.set(token.address, token);
       }
     });
-
     const uniqueTokens = Array.from(uniqueTokensMap.values());
 
-    // ---------------------------------------------------------
-    // 5. 최종 정렬 (네이티브 우선 -> 시가총액 순) 및 캐시 저장
-    // ---------------------------------------------------------
+    // Toplist 캐시 저장 (검색 아닐 때만)
     if (!query) {
-      uniqueTokens.sort((a: any, b: any) => {
-        // 1순위: 네이티브 토큰
-        if (a.isNative && !b.isNative) return -1;
-        if (!a.isNative && b.isNative) return 1;
-
-        // 2순위: 시가총액 (내림차순)
-        return b.rawMarketCap - a.rawMarketCap;
-      });
-
-      // [수정] cacheKey 변수 대신 직접 키 생성
       topTokensCache.set(`top_${chainId}`, {
         data: uniqueTokens,
         timestamp: Date.now(),
@@ -193,7 +226,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error(`Fetch Tokens Error (${chainId}):`, error);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch tokens" },
+      { error: "Failed to fetch tokens" },
       { status: 500 }
     );
   }
