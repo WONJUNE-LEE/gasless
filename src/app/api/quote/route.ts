@@ -37,7 +37,7 @@ export async function GET(request: Request) {
   const tokenOut = searchParams.get("tokenOut");
   const amount = searchParams.get("amount");
   const chainId = searchParams.get("chainId") || "1";
-  const slippage = searchParams.get("slippage") || "0.005"; // 기본 0.5%
+  const slippage = searchParams.get("slippage") || "0.5"; // 기본 0.5%
 
   if (!tokenIn || !tokenOut || !amount) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });

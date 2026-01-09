@@ -47,6 +47,8 @@ async function fetchOkxWithRetry(url: string, headers: any, retries = 2) {
         headers,
         next: { revalidate: 0 },
       });
+      // 400/500 에러라도 JSON 응답을 확인하기 위해 그냥 리턴할 수도 있음
+      // 여기서는 OK가 아니면 에러로 간주하되, 400대 에러는 그냥 빈 값 처리 유도 가능
       if (res.ok) return res;
     } catch (e) {
       if (i === retries - 1) throw e;
@@ -72,7 +74,6 @@ export async function GET(request: Request) {
     const decimalsCacheKey = `decimals_${chainId}`;
     const cachedDecimals = decimalsCache.get(decimalsCacheKey);
 
-    // 캐시가 유효하면 사용, 아니면 백그라운드나 필요시 갱신 (여기서는 동기적으로 처리하되 실패 시 무시)
     if (
       cachedDecimals &&
       Date.now() - cachedDecimals.timestamp < DECIMALS_CACHE_DURATION
@@ -90,7 +91,7 @@ export async function GET(request: Request) {
           headers
         );
         const data = await res.json();
-        if (data.code === "0" && data.data) {
+        if (data.code === "0" && Array.isArray(data.data)) {
           data.data.forEach((t: any) => {
             if (t.tokenContractAddress && t.decimals) {
               decimalsMap.set(
@@ -118,7 +119,7 @@ export async function GET(request: Request) {
       const endpoint = "/api/v6/dex/market/token/search";
       const queryParams = new URLSearchParams({
         chains: chainId,
-        search: query.toLowerCase(), // 주소 검색 시 소문자 변환 권장
+        search: query.toLowerCase(),
       });
       const queryString = "?" + queryParams.toString();
       const headers = generateOkxHeaders("GET", endpoint, queryString);
@@ -130,7 +131,6 @@ export async function GET(request: Request) {
       const data = await res.json();
       rawTokens = data.data || [];
     } else {
-      // 랭킹 모드
       const cacheKey = `top_${chainId}`;
       const cachedTop = topTokensCache.get(cacheKey);
       if (
@@ -149,19 +149,30 @@ export async function GET(request: Request) {
       const queryString = "?" + queryParams.toString();
       const headers = generateOkxHeaders("GET", endpoint, queryString);
 
-      const res = await fetchOkxWithRetry(
-        `${OKX_API_URL}${endpoint}${queryString}`,
-        headers
-      );
-      const data = await res.json();
-      rawTokens = data.data || [];
+      try {
+        const res = await fetchOkxWithRetry(
+          `${OKX_API_URL}${endpoint}${queryString}`,
+          headers
+        );
+        const data = await res.json();
+        rawTokens = data.data || [];
+      } catch (e) {
+        console.warn(`Failed to fetch toplist for chain ${chainId}`, e);
+        rawTokens = []; // 실패 시 빈 배열
+      }
+    }
+
+    // [수정] rawTokens가 배열이 아닌 경우 방어 코드 (Berachain 등 미지원 체인 대응)
+    if (!Array.isArray(rawTokens)) {
+      console.warn(`Invalid rawTokens format for chain ${chainId}`, rawTokens);
+      rawTokens = [];
     }
 
     // ---------------------------------------------------------
     // [Step 3] 데이터 매핑 및 Decimals 보정
     // ---------------------------------------------------------
     const mappedTokens = rawTokens
-      .filter((t: any) => t.tokenContractAddress) // 주소 없는 데이터 필터링
+      .filter((t: any) => t && t.tokenContractAddress) // null check 추가
       .map((t: any) => {
         const tokenAddr = t.tokenContractAddress.toLowerCase();
         let isNative = false;
@@ -177,10 +188,6 @@ export async function GET(request: Request) {
           isNative = true;
         }
 
-        // [수정 핵심] Decimals 우선순위 변경
-        // 1. API 응답의 decimal 필드 (search 결과 등)
-        // 2. all-tokens 캐시 맵
-        // 3. 기본값 18
         let finalDecimal = 18;
         if (t.decimal) {
           finalDecimal = parseInt(t.decimal);
@@ -210,7 +217,6 @@ export async function GET(request: Request) {
     // 중복 제거
     const uniqueTokensMap = new Map();
     mappedTokens.forEach((token: any) => {
-      // 주소 기준으로 중복 제거
       if (!uniqueTokensMap.has(token.address.toLowerCase())) {
         uniqueTokensMap.set(token.address.toLowerCase(), token);
       }
@@ -218,8 +224,7 @@ export async function GET(request: Request) {
 
     const uniqueTokens = Array.from(uniqueTokensMap.values());
 
-    // Toplist일 경우만 캐싱
-    if (!query) {
+    if (!query && uniqueTokens.length > 0) {
       topTokensCache.set(`top_${chainId}`, {
         data: uniqueTokens,
         timestamp: Date.now(),
@@ -229,9 +234,7 @@ export async function GET(request: Request) {
     return NextResponse.json(uniqueTokens);
   } catch (error: any) {
     console.error(`Fetch Tokens Error (${chainId}):`, error);
-    return NextResponse.json(
-      { error: "Failed to fetch tokens" },
-      { status: 500 }
-    );
+    // 500 에러 대신 빈 배열 반환하여 프론트엔드 크래시 방지
+    return NextResponse.json([], { status: 200 });
   }
 }

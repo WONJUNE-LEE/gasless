@@ -67,7 +67,7 @@ export default function Header() {
   );
 
   const navItems = [
-    { name: "Swap", href: "/swap", icon: ArrowRightLeft },
+    { name: "Swap", href: "/", icon: ArrowRightLeft },
     { name: "Staking", href: "/staking", icon: Coins },
   ];
 

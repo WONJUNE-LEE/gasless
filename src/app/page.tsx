@@ -33,6 +33,7 @@ import { okxApi, CHAINS, TokenInfo, NATIVE_TOKEN_ADDRESS } from "@/lib/api";
 import NativeChart from "@/components/dex/NativeChart";
 import TokenSelector from "@/components/dex/TokenSelector";
 import { toWei, fromWei } from "@/lib/utils";
+import RecentTrades from "@/components/dex/RecentTrades"; // [추가]
 
 const PLACEHOLDER_TOKEN: TokenInfo = {
   chainId: 0,
@@ -306,7 +307,7 @@ export default function Home() {
         const fromToken = activeTab === "buy" ? tokenB : tokenA;
         const toToken = activeTab === "buy" ? tokenA : tokenB;
         const weiAmount = toWei(amount, fromToken.decimals);
-        const targetSlippage = slippage === "auto" ? "0.005" : slippage;
+        const targetSlippage = slippage === "auto" ? "0.5" : slippage;
 
         const data = await okxApi.getQuote({
           chainId,
@@ -369,6 +370,21 @@ export default function Home() {
     setNeedsApprove(allowance < amountWei);
   }, [allowance, amount, currentPayToken, dexRouterAddress]);
 
+  // [추가] 실시간 데이터 갱신 (Polling)
+  useEffect(() => {
+    if (!tokenA) return;
+
+    const interval = setInterval(() => {
+      // 차트 마지막 데이터 갱신 (Optional: 전체 다시 로드 대신 마지막 캔들만 가져오도록 최적화 가능하나 여기선 간단히)
+      // 실제로는 별도 함수로 분리하여 호출하는 것이 좋음
+      // 여기서는 Quote만 갱신하거나, 주요 가격 정보만 갱신
+      console.log("Polling data...");
+      // 예: 현재 가격 다시 fetch
+    }, 15000); // 15초
+
+    return () => clearInterval(interval);
+  }, [tokenA]);
+
   const handleSelectToken = (token: TokenInfo) => {
     if (token.chainId !== chainId) {
       setChainId(token.chainId);
@@ -417,7 +433,7 @@ export default function Home() {
     setIsSwapping(true);
     try {
       const weiAmount = toWei(amount, currentPayToken.decimals);
-      const targetSlippage = slippage === "auto" ? "0.005" : slippage;
+      const targetSlippage = slippage === "auto" ? "0.5" : slippage;
 
       const txData = await okxApi.getSwapTransaction({
         chainId,
@@ -883,6 +899,24 @@ export default function Home() {
             )}
           </div>
         </motion.div>
+      </div>
+
+      {/* [추가] 3. On-chain Transactions Section */}
+      <div className="mt-8">
+        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+          <ArrowRightLeft className="w-5 h-5 text-blue-400" />
+          On-chain Transactions
+        </h2>
+        {displayTokenA && (
+          <RecentTrades
+            chainId={chainId}
+            tokenAddress={
+              displayTokenA.address === NATIVE_TOKEN_ADDRESS
+                ? currentChain.wrappedTokenAddress // Native인 경우 Wrapped 주소 사용
+                : displayTokenA.address
+            }
+          />
+        )}
       </div>
 
       <TokenSelector

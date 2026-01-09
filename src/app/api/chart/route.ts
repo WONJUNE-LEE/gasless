@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { createHmac } from "crypto";
 import { CHAINS, NATIVE_TOKEN_ADDRESS } from "@/lib/api";
 
-const OKX_API_URL = "https://web3.okx.com"; // [수정] v6 Base URL
+const OKX_API_URL = "https://web3.okx.com";
 
 function generateOkxHeaders(
   method: string,
@@ -36,12 +36,12 @@ export async function GET(request: Request) {
   const chainId = searchParams.get("chainId");
   let tokenAddress = searchParams.get("tokenAddress");
   const timeframe = searchParams.get("timeframe") || "1D";
+  const after = searchParams.get("after"); // Pagination (timestamp)
 
   if (!chainId || !tokenAddress) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
   }
 
-  // [핵심] 차트용 주소 변환: Native Token(0xeeee...) -> Wrapped Token
   if (tokenAddress.toLowerCase() === NATIVE_TOKEN_ADDRESS) {
     const chainConfig = CHAINS.find((c) => c.id === parseInt(chainId));
     if (chainConfig?.wrappedTokenAddress) {
@@ -49,22 +49,27 @@ export async function GET(request: Request) {
     }
   }
 
-  // v6 Timeframe 매핑
-  let bar = "1D"; // 기본값
+  let bar = "1D";
   if (timeframe === "1H") bar = "1H";
   if (timeframe === "4H") bar = "4H";
   if (timeframe === "1W") bar = "1W";
 
   try {
-    const endpoint = "/api/v6/dex/market/candles"; // [수정] v6
+    const endpoint = "/api/v6/dex/market/candles";
 
-    const queryParams = new URLSearchParams({
+    const queryParamsObj: any = {
       chainIndex: chainId,
-      tokenContractAddress: tokenAddress.toLowerCase(),
+      tokenContractAddress: tokenAddress!.toLowerCase(),
       bar: bar,
-      limit: "100",
-    });
+      limit: "300", // [수정] 한 번에 가져오는 캔들 수를 100 -> 300으로 증가
+    };
 
+    // OKX API에서 after는 해당 타임스탬프보다 '오래된' 데이터를 가져옵니다.
+    if (after) {
+      queryParamsObj.after = after;
+    }
+
+    const queryParams = new URLSearchParams(queryParamsObj);
     const queryString = "?" + queryParams.toString();
     const headers = generateOkxHeaders("GET", endpoint, queryString);
 
@@ -78,7 +83,11 @@ export async function GET(request: Request) {
       throw new Error(data.msg || "OKX Chart API Error");
     }
 
-    // v6 Response: [ts, o, h, l, c, vol, volUsd, confirm]
+    // 데이터가 없는 경우 빈 배열 반환
+    if (!data.data || !Array.isArray(data.data)) {
+      return NextResponse.json([]);
+    }
+
     const ohlcv = data.data
       .map((item: string[]) => ({
         time: parseInt(item[0]) / 1000,
@@ -88,9 +97,7 @@ export async function GET(request: Request) {
         close: parseFloat(item[4]),
         volUsd: item[6] ? parseFloat(item[6]) : 0,
       }))
-      .reverse();
-
-    ohlcv.sort((a: any, b: any) => a.time - b.time);
+      .sort((a: any, b: any) => a.time - b.time);
 
     return NextResponse.json(ohlcv);
   } catch (error: any) {
