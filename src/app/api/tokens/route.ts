@@ -174,26 +174,28 @@ export async function GET(request: Request) {
     const mappedTokens = rawTokens
       .filter((t: any) => t && t.tokenContractAddress)
       .flatMap((t: any) => {
+        // map -> flatMap으로 변경
         const tokenAddr = t.tokenContractAddress.toLowerCase();
 
-        // [보완] 일반 토큰 소수점 처리
-        // API 데이터가 없으면 기본값 18을 쓰되, USDC/USDT 같은 주요 토큰은 주의가 필요합니다.
-        // (더 안전한 방법은 온체인에서 decimals()를 조회하는 것이지만, 여기서는 API 의존성을 유지합니다)
+        // 공통 데이터 추출
         let finalDecimal = 18;
         if (t.decimal) finalDecimal = parseInt(t.decimal);
         else if (t.decimals) finalDecimal = parseInt(t.decimals);
         else if (decimalsMap.has(tokenAddr))
           finalDecimal = decimalsMap.get(tokenAddr)!;
 
-        // [추가] 네이티브 토큰 소수점 가져오기
-        // 만약 currentChain을 못 찾으면 안전하게 18로 fallback
-        const nativeDecimals = currentChain?.nativeDecimals ?? 18;
-
         const baseTokenData = {
-          /* ... 기존과 동일 ... */
+          chainId: parseInt(chainId),
+          logoURI: t.tokenLogoUrl || t.logoUrl || "",
+          price: t.price || t.tokenUnitPrice || "0",
+          change24h: t.change || t.change24H || "0",
+          volume24h: t.volume || t.vol24h || "0",
+          liquidity: t.liquidity || "0",
+          marketCap: t.marketCap || "0",
+          rawMarketCap: parseFloat(t.marketCap || "0"),
         };
 
-        // 1. 이미 네이티브 주소인 경우
+        // [핵심 수정 1] 이미 네이티브 주소(0xeeee...)로 들어온 경우 바로 Native로 반환
         if (tokenAddr === NATIVE_TOKEN_ADDRESS) {
           return [
             {
@@ -201,29 +203,31 @@ export async function GET(request: Request) {
               address: NATIVE_TOKEN_ADDRESS,
               name: currentChain?.name || "Native Token",
               symbol: currentChain?.symbol || "ETH",
-              decimals: nativeDecimals, // [수정] 변수 사용
-              isNative: true,
+              decimals: 18,
+              isNative: true, // 여기서 true로 강제 설정
             },
           ];
         }
 
-        // 2. 래핑 토큰인 경우 (Wrapped + Native 생성)
+        // [핵심 수정 2] 래핑 토큰 주소인 경우 -> Native와 Wrapped 2개 생성 (지난번 솔루션)
         if (wrappedAddress && tokenAddr === wrappedAddress) {
           return [
+            // 1. Wrapped Token
             {
-              ...baseTokenData, // Wrapped 정보
+              ...baseTokenData,
               address: t.tokenContractAddress,
               name: t.tokenName,
               symbol: t.tokenSymbol,
-              decimals: finalDecimal, // [중요] Wrapped 토큰은 자체 소수점 사용
+              decimals: finalDecimal,
               isNative: false,
             },
+            // 2. Native Token (가상 생성)
             {
-              ...baseTokenData, // Native 정보
+              ...baseTokenData,
               address: NATIVE_TOKEN_ADDRESS,
               name: currentChain?.name || "Native Token",
               symbol: currentChain?.symbol || "ETH",
-              decimals: nativeDecimals, // [수정] 변수 사용
+              decimals: 18,
               isNative: true,
             },
           ];
@@ -236,7 +240,7 @@ export async function GET(request: Request) {
             address: t.tokenContractAddress,
             name: t.tokenName,
             symbol: t.tokenSymbol,
-            decimals: finalDecimal, // API에서 가져온 값 사용
+            decimals: finalDecimal,
             isNative: false,
           },
         ];
