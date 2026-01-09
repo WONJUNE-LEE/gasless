@@ -43,6 +43,8 @@ const PLACEHOLDER_TOKEN: TokenInfo = {
   decimals: 18,
 };
 
+// [추가] 화면 표시용 실시간 가격 상태 관리
+
 const SLIPPAGE_OPTIONS = [
   { label: "Auto", value: "auto" },
   { label: "0.1%", value: "0.1" },
@@ -81,6 +83,8 @@ export default function Home() {
 
   const [slippage, setSlippage] = useState("auto");
   const [showSlippage, setShowSlippage] = useState(false);
+
+  const [displayPrice, setDisplayPrice] = useState<number>(0);
 
   const [modalSource, setModalSource] = useState<
     "chart" | "pay" | "receive" | null
@@ -147,6 +151,23 @@ export default function Home() {
       setAmount("");
     }
   }, [isTxSuccess, refetchBalance, refetchAllowance]);
+
+  // 1. 토큰이 변경될 때 초기 가격 설정
+  useEffect(() => {
+    if (tokenA && tokenA.price) {
+      setDisplayPrice(parseFloat(tokenA.price));
+    }
+  }, [tokenA]);
+
+  // 2. 차트 데이터 로드 시(초기 로딩 및 폴링) 최신 가격으로 업데이트
+  useEffect(() => {
+    if (chartData.length > 0) {
+      const lastCandle = chartData[chartData.length - 1];
+      if (lastCandle && lastCandle.close) {
+        setDisplayPrice(lastCandle.close);
+      }
+    }
+  }, [chartData]);
 
   // Sync Chain
   useEffect(() => {
@@ -456,9 +477,9 @@ export default function Home() {
     }
   };
 
-  const currentPrice = displayTokenA.price
-    ? parseFloat(displayTokenA.price)
-    : 0;
+  //const currentPrice = displayTokenA.price
+  //  ? parseFloat(displayTokenA.price)
+  //  : 0;
   const change24h = displayTokenA.change24h
     ? parseFloat(displayTokenA.change24h)
     : 0;
@@ -529,7 +550,11 @@ export default function Home() {
         </div>
         <div className="text-right mt-4 md:mt-0">
           <div className="text-4xl font-black tabular-nums tracking-tight text-white">
-            {currentPrice > 0 ? `$${currentPrice.toLocaleString()}` : "---"}
+            {displayPrice > 0
+              ? `$${displayPrice.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}`
+              : "---"}
           </div>
           <div
             className={`text-sm font-bold flex justify-end items-center gap-1 ${

@@ -213,6 +213,18 @@ export default function TokenSelector({
                               <span className="text-base font-bold text-white truncate">
                                 {token.symbol}
                               </span>
+
+                              {token.isNative ? (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/20">
+                                  NATIVE
+                                </span>
+                              ) : (
+                                token.symbol.toUpperCase().startsWith("W") && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-700 text-gray-300 border border-gray-600">
+                                    WRAPPED
+                                  </span>
+                                )
+                              )}
                               <span className="text-xs text-gray-500 truncate hidden sm:block">
                                 {token.name}
                               </span>

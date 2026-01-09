@@ -169,49 +169,58 @@ export async function GET(request: Request) {
     }
 
     // ---------------------------------------------------------
-    // [Step 3] 데이터 매핑 및 Decimals 보정
+    // [Step 3] 데이터 매핑 (Native / Wrapped 분리 로직 적용)
     // ---------------------------------------------------------
     const mappedTokens = rawTokens
-      .filter((t: any) => t && t.tokenContractAddress) // null check 추가
-      .map((t: any) => {
+      .filter((t: any) => t && t.tokenContractAddress)
+      .flatMap((t: any) => {
+        // map -> flatMap으로 변경
         const tokenAddr = t.tokenContractAddress.toLowerCase();
-        let isNative = false;
-        let finalAddress = t.tokenContractAddress;
-        let finalName = t.tokenName;
-        let finalSymbol = t.tokenSymbol;
 
-        // Native Token 처리
-        if (wrappedAddress && tokenAddr === wrappedAddress) {
-          finalAddress = NATIVE_TOKEN_ADDRESS;
-          finalName = currentChain?.name || "Native Token";
-          finalSymbol = currentChain?.symbol || "ETH";
-          isNative = true;
-        }
-
+        // 공통 데이터 추출
         let finalDecimal = 18;
-        if (t.decimal) {
-          finalDecimal = parseInt(t.decimal);
-        } else if (t.decimals) {
-          finalDecimal = parseInt(t.decimals);
-        } else if (decimalsMap.has(tokenAddr)) {
+        if (t.decimal) finalDecimal = parseInt(t.decimal);
+        else if (t.decimals) finalDecimal = parseInt(t.decimals);
+        else if (decimalsMap.has(tokenAddr))
           finalDecimal = decimalsMap.get(tokenAddr)!;
-        }
 
-        return {
+        const baseTokenData = {
           chainId: parseInt(chainId),
-          address: finalAddress,
-          name: finalName,
-          symbol: finalSymbol,
-          decimals: finalDecimal,
           logoURI: t.tokenLogoUrl || t.logoUrl || "",
           price: t.price || t.tokenUnitPrice || "0",
           change24h: t.change || t.change24H || "0",
           volume24h: t.volume || t.vol24h || "0",
           liquidity: t.liquidity || "0",
           marketCap: t.marketCap || "0",
-          isNative: isNative,
           rawMarketCap: parseFloat(t.marketCap || "0"),
         };
+
+        const resultTokens = [];
+
+        // 1. Wrapped Token (원본 데이터 그대로 사용)
+        // Wrapped 주소여도 무조건 Wrapped 버전은 하나 추가합니다.
+        resultTokens.push({
+          ...baseTokenData,
+          address: t.tokenContractAddress, // 원본 주소
+          name: t.tokenName,
+          symbol: t.tokenSymbol, // 예: WETH, WMON
+          decimals: finalDecimal,
+          isNative: false,
+        });
+
+        // 2. Native Token (Wrapped 주소와 일치할 경우 가상의 Native 토큰 추가)
+        if (wrappedAddress && tokenAddr === wrappedAddress) {
+          resultTokens.push({
+            ...baseTokenData,
+            address: NATIVE_TOKEN_ADDRESS, // 0xeeee...
+            name: currentChain?.name || "Native Token", // 예: Ethereum
+            symbol: currentChain?.symbol || "ETH", // 예: ETH, MON
+            decimals: 18, // Native는 통상 18
+            isNative: true,
+          });
+        }
+
+        return resultTokens;
       });
 
     // 중복 제거
