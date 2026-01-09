@@ -41,8 +41,8 @@ const chains = [
 
 // 2. Wagmi Config (지갑 충돌 방지 설정)
 const config = getDefaultConfig({
-  appName: "Berachain DEX",
-  projectId: "YOUR_PROJECT_ID", // https://cloud.walletconnect.com 에서 무료 발급 필요
+  appName: "gasless",
+  projectId: "81207e350e2a706fd57ae346444dae69", // https://cloud.walletconnect.com 에서 무료 발급 필요
   chains: chains,
   ssr: true,
   // [핵심] 여기에 적은 지갑은 '추천 목록'에 뜹니다.
