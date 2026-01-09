@@ -4,17 +4,16 @@ import { CHAINS, NATIVE_TOKEN_ADDRESS } from "@/lib/api";
 
 const OKX_API_URL = "https://web3.okx.com";
 
-// 캐시 설정: 메타데이터(소수점 등)는 오래, 랭킹 정보는 짧게
+// 캐시 설정
 const decimalsCache = new Map<
   string,
   { data: Map<string, number>; timestamp: number }
 >();
 const topTokensCache = new Map<string, { data: any[]; timestamp: number }>();
 
-const DECIMALS_CACHE_DURATION = 60 * 60 * 1000; // 1시간 (변동 적음)
-const TOPLIST_CACHE_DURATION = 2 * 60 * 1000; // 2분 (가격 변동)
+const DECIMALS_CACHE_DURATION = 60 * 60 * 1000; // 1시간
+const TOPLIST_CACHE_DURATION = 2 * 60 * 1000; // 2분
 
-// OKX 헤더 생성
 function generateOkxHeaders(
   method: string,
   requestPath: string,
@@ -67,19 +66,19 @@ export async function GET(request: Request) {
 
   try {
     // ---------------------------------------------------------
-    // [Step 1] Decimals 정보 확보 (All-Tokens API 이용)
+    // [Step 1] Decimals 캐시 준비 (보조 수단)
     // ---------------------------------------------------------
     let decimalsMap = new Map<string, number>();
     const decimalsCacheKey = `decimals_${chainId}`;
     const cachedDecimals = decimalsCache.get(decimalsCacheKey);
 
+    // 캐시가 유효하면 사용, 아니면 백그라운드나 필요시 갱신 (여기서는 동기적으로 처리하되 실패 시 무시)
     if (
       cachedDecimals &&
       Date.now() - cachedDecimals.timestamp < DECIMALS_CACHE_DURATION
     ) {
       decimalsMap = cachedDecimals.data;
     } else {
-      // decimals 정보를 얻기 위해 aggregator/all-tokens 호출
       const endpoint = "/api/v6/dex/aggregator/all-tokens";
       const queryParams = new URLSearchParams({ chainIndex: chainId });
       const queryString = "?" + queryParams.toString();
@@ -91,7 +90,6 @@ export async function GET(request: Request) {
           headers
         );
         const data = await res.json();
-
         if (data.code === "0" && data.data) {
           data.data.forEach((t: any) => {
             if (t.tokenContractAddress && t.decimals) {
@@ -101,34 +99,30 @@ export async function GET(request: Request) {
               );
             }
           });
-          // 캐시 업데이트
           decimalsCache.set(decimalsCacheKey, {
             data: decimalsMap,
             timestamp: Date.now(),
           });
         }
       } catch (e) {
-        console.warn(
-          "Failed to fetch all-tokens for decimals, defaulting to 18",
-          e
-        );
+        console.warn("Decimals fetch warning:", e);
       }
     }
 
     // ---------------------------------------------------------
-    // [Step 2] 토큰 리스트 확보 (Toplist 또는 Search API)
+    // [Step 2] 토큰 목록 Fetch (Search or Toplist)
     // ---------------------------------------------------------
     let rawTokens: any[] = [];
 
     if (query) {
-      // 검색 모드
       const endpoint = "/api/v6/dex/market/token/search";
       const queryParams = new URLSearchParams({
         chains: chainId,
-        search: query.toLowerCase(),
+        search: query.toLowerCase(), // 주소 검색 시 소문자 변환 권장
       });
       const queryString = "?" + queryParams.toString();
       const headers = generateOkxHeaders("GET", endpoint, queryString);
+
       const res = await fetchOkxWithRetry(
         `${OKX_API_URL}${endpoint}${queryString}`,
         headers
@@ -136,10 +130,9 @@ export async function GET(request: Request) {
       const data = await res.json();
       rawTokens = data.data || [];
     } else {
-      // 랭킹 모드 (Toplist API - 가격, 변동률 포함됨)
+      // 랭킹 모드
       const cacheKey = `top_${chainId}`;
       const cachedTop = topTokensCache.get(cacheKey);
-
       if (
         cachedTop &&
         Date.now() - cachedTop.timestamp < TOPLIST_CACHE_DURATION
@@ -150,11 +143,12 @@ export async function GET(request: Request) {
       const endpoint = "/api/v6/dex/market/token/toplist";
       const queryParams = new URLSearchParams({
         chains: chainId,
-        sortBy: "6", // MarketCap 순
+        sortBy: "6", // MarketCap
         timeFrame: "4", // 24h
       });
       const queryString = "?" + queryParams.toString();
       const headers = generateOkxHeaders("GET", endpoint, queryString);
+
       const res = await fetchOkxWithRetry(
         `${OKX_API_URL}${endpoint}${queryString}`,
         headers
@@ -164,57 +158,67 @@ export async function GET(request: Request) {
     }
 
     // ---------------------------------------------------------
-    // [Step 3] 데이터 병합 (Toplist 정보 + Decimals Map)
+    // [Step 3] 데이터 매핑 및 Decimals 보정
     // ---------------------------------------------------------
-    let mappedTokens = rawTokens.map((t: any) => {
-      const tokenAddr = t.tokenContractAddress.toLowerCase();
-      let isNative = false;
+    const mappedTokens = rawTokens
+      .filter((t: any) => t.tokenContractAddress) // 주소 없는 데이터 필터링
+      .map((t: any) => {
+        const tokenAddr = t.tokenContractAddress.toLowerCase();
+        let isNative = false;
+        let finalAddress = t.tokenContractAddress;
+        let finalName = t.tokenName;
+        let finalSymbol = t.tokenSymbol;
 
-      let finalAddress = t.tokenContractAddress;
-      let finalName = t.tokenName;
-      let finalSymbol = t.tokenSymbol;
+        // Native Token 처리
+        if (wrappedAddress && tokenAddr === wrappedAddress) {
+          finalAddress = NATIVE_TOKEN_ADDRESS;
+          finalName = currentChain?.name || "Native Token";
+          finalSymbol = currentChain?.symbol || "ETH";
+          isNative = true;
+        }
 
-      // Native Token 처리
-      if (wrappedAddress && tokenAddr === wrappedAddress) {
-        finalAddress = NATIVE_TOKEN_ADDRESS;
-        finalName = currentChain?.name || "Native Token";
-        finalSymbol = currentChain?.symbol || "ETH";
-        isNative = true;
-      }
+        // [수정 핵심] Decimals 우선순위 변경
+        // 1. API 응답의 decimal 필드 (search 결과 등)
+        // 2. all-tokens 캐시 맵
+        // 3. 기본값 18
+        let finalDecimal = 18;
+        if (t.decimal) {
+          finalDecimal = parseInt(t.decimal);
+        } else if (t.decimals) {
+          finalDecimal = parseInt(t.decimals);
+        } else if (decimalsMap.has(tokenAddr)) {
+          finalDecimal = decimalsMap.get(tokenAddr)!;
+        }
 
-      // [핵심] Decimals 찾기: Map에 있으면 사용, 없으면 Toplist의 decimal, 그것도 없으면 18
-      const exactDecimal = decimalsMap.get(tokenAddr);
-      const fallbackDecimal = t.decimal || t.decimals || "18";
-      const finalDecimal =
-        exactDecimal !== undefined ? exactDecimal : parseInt(fallbackDecimal);
-
-      return {
-        chainId: parseInt(chainId),
-        address: finalAddress,
-        name: finalName,
-        symbol: finalSymbol,
-        decimals: finalDecimal, // 정확한 소수점 적용
-        logoURI: t.tokenLogoUrl || t.logoUrl || "",
-        price: t.price || t.tokenUnitPrice || "0",
-        change24h: t.change || t.change24H || "0", // Toplist의 가격 변동률 적용
-        volume24h: t.volume || t.vol24h || "0",
-        liquidity: t.liquidity || "0",
-        marketCap: t.marketCap || "0",
-        isNative: isNative,
-        rawMarketCap: parseFloat(t.marketCap || "0"),
-      };
-    });
+        return {
+          chainId: parseInt(chainId),
+          address: finalAddress,
+          name: finalName,
+          symbol: finalSymbol,
+          decimals: finalDecimal,
+          logoURI: t.tokenLogoUrl || t.logoUrl || "",
+          price: t.price || t.tokenUnitPrice || "0",
+          change24h: t.change || t.change24H || "0",
+          volume24h: t.volume || t.vol24h || "0",
+          liquidity: t.liquidity || "0",
+          marketCap: t.marketCap || "0",
+          isNative: isNative,
+          rawMarketCap: parseFloat(t.marketCap || "0"),
+        };
+      });
 
     // 중복 제거
     const uniqueTokensMap = new Map();
     mappedTokens.forEach((token: any) => {
-      if (!uniqueTokensMap.has(token.address)) {
-        uniqueTokensMap.set(token.address, token);
+      // 주소 기준으로 중복 제거
+      if (!uniqueTokensMap.has(token.address.toLowerCase())) {
+        uniqueTokensMap.set(token.address.toLowerCase(), token);
       }
     });
+
     const uniqueTokens = Array.from(uniqueTokensMap.values());
 
-    // Toplist 캐시 저장 (검색 아닐 때만)
+    // Toplist일 경우만 캐싱
     if (!query) {
       topTokensCache.set(`top_${chainId}`, {
         data: uniqueTokens,

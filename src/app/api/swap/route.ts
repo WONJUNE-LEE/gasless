@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createHmac } from "crypto";
 
+// ... (Header 생성 함수 생략, 기존과 동일) ...
 const OKX_API_URL = "https://web3.okx.com";
 
 function generateOkxHeaders(
@@ -8,6 +9,7 @@ function generateOkxHeaders(
   requestPath: string,
   queryString: string
 ) {
+  // ... 기존 코드 유지
   const apiKey = process.env.OKX_API_KEY!;
   const secretKey = process.env.OKX_SECRET_KEY!;
   const passphrase = process.env.OKX_PASSPHRASE!;
@@ -36,6 +38,10 @@ export async function GET(request: Request) {
   const fromTokenAddress = searchParams.get("fromTokenAddress");
   const toTokenAddress = searchParams.get("toTokenAddress");
   const userWalletAddress = searchParams.get("userWalletAddress");
+
+  // [중요] OKX API 기준: slippagePercent="0.5" 는 0.5%를 의미합니다.
+  // 사용자가 1%를 원하면 "1"을 전달해야 합니다.
+  // 프론트엔드에서 0.5%를 "0.005"로 보내고 있다면 "0.5"로 수정해서 보내야 합니다.
   const slippage = searchParams.get("slippage") || "0.5";
 
   if (
@@ -53,7 +59,6 @@ export async function GET(request: Request) {
 
   try {
     const endpoint = "/api/v6/dex/aggregator/swap";
-    // [수정] OKX API 파라미터 이름은 'slippagePercent' 입니다.
     const queryParams = new URLSearchParams({
       chainIndex: chainId,
       amount,
@@ -74,6 +79,7 @@ export async function GET(request: Request) {
     const data = await res.json();
 
     if (data.code !== "0") {
+      // 에러 메시지 상세 반환
       throw new Error(data.msg || "OKX Swap API Error");
     }
 

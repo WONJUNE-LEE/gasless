@@ -14,7 +14,7 @@ import {
   BarChart2,
   Droplets,
   Wallet,
-  Route as RouteIcon, // 아이콘 추가
+  Route as RouteIcon,
 } from "lucide-react";
 import {
   useAccount,
@@ -42,12 +42,15 @@ const PLACEHOLDER_TOKEN: TokenInfo = {
 
 const SLIPPAGE_OPTIONS = [
   { label: "Auto", value: "auto" },
-  { label: "0.1%", value: "0.1" }, // 기존 "0.001" -> "0.1"
-  { label: "0.5%", value: "0.5" }, // 기존 "0.005" -> "0.5"
-  { label: "1.0%", value: "1.0" }, // 기존 "0.01"  -> "1.0"
+  { label: "0.1%", value: "0.1" },
+  { label: "0.5%", value: "0.5" },
+  { label: "1.0%", value: "1.0" },
 ];
 
 export default function Home() {
+  // [수정 1] Hydration 에러 방지를 위한 마운트 상태 추가
+  const [isMounted, setIsMounted] = useState(false);
+
   // Wagmi Hooks
   const { address, isConnected } = useAccount();
   const walletChainId = useChainId();
@@ -147,6 +150,11 @@ export default function Home() {
       setChainId(walletChainId);
     }
   }, [isConnected, walletChainId]);
+
+  // [수정 2] 컴포넌트 마운트 시 isMounted true로 설정
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Global Event Listeners
   useEffect(() => {
@@ -589,7 +597,8 @@ export default function Home() {
                   <div className="flex items-center gap-1 text-gray-400">
                     <Wallet className="w-3 h-3" />
                     <span>
-                      {balanceData
+                      {/* [수정 3] balanceData Hydration 보호 */}
+                      {isMounted && balanceData
                         ? parseFloat(balanceData.formatted).toLocaleString(
                             undefined,
                             { maximumFractionDigits: 4 }
@@ -597,7 +606,8 @@ export default function Home() {
                         : "0"}
                     </span>
                   </div>
-                  {balanceData && (
+                  {/* [수정 4] 버튼 Hydration 보호 */}
+                  {isMounted && balanceData && (
                     <button
                       onClick={handleMax}
                       className="text-blue-400 hover:text-blue-300 transition-colors uppercase text-[10px] bg-blue-500/10 px-1.5 py-0.5 rounded"
@@ -703,7 +713,6 @@ export default function Home() {
                   {currentReceiveToken.symbol}
                 </span>
               </div>
-              {/* [추가] Order Route 표시 */}
               <div className="flex justify-between text-xs text-gray-500 font-medium items-center">
                 <span>Order Route</span>
                 <span className="text-gray-300 truncate max-w-[150px] flex items-center gap-1">
@@ -731,9 +740,8 @@ export default function Home() {
                   onClick={() => setShowSlippage(true)}
                   className="flex items-center gap-1 bg-white/5 px-1.5 py-0.5 rounded text-gray-300 hover:text-white transition-colors"
                 >
-                  {slippage === "auto"
-                    ? "Auto (0.5%)"
-                    : `${(parseFloat(slippage) * 100).toFixed(1)}%`}{" "}
+                  {slippage === "auto" ? "Auto (0.5%)" : `${slippage}%`}{" "}
+                  {/* 이미 퍼센트 값이므로 그대로 출력 */}
                   <Settings className="w-3 h-3" />
                 </button>
               </div>
@@ -773,7 +781,7 @@ export default function Home() {
                   ? "Approving..."
                   : "Swapping..."}
               </button>
-            ) : !isConnected ? (
+            ) : !isMounted || !isConnected ? ( // [수정 5] Hydration 보호 및 연결 상태 확인
               <button className="w-full py-4 rounded-xl text-lg font-black bg-blue-600 text-white shadow-lg">
                 Connect Wallet
               </button>

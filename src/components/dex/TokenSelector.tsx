@@ -85,6 +85,20 @@ export default function TokenSelector({
   };
 
   const handleTokenSelect = (token: TokenInfo) => {
+    // [수정] 방어 로직 추가: 주소가 유효한지 확인
+    if (!token || !token.address) {
+      console.error("Invalid token selected:", token);
+      alert("Invalid token data. Please try searching again.");
+      return;
+    }
+
+    // Decimals가 0이거나 이상할 경우 경고 (개발용)
+    if (token.decimals === undefined || token.decimals === null) {
+      console.warn(
+        "Token decimals missing, defaulting to 18 in parent might fail."
+      );
+    }
+
     onSelect(token);
     onClose();
   };
