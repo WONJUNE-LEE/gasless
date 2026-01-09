@@ -1,19 +1,10 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Check, Copy, Star } from "lucide-react";
-import { TokenInfo, CHAINS, okxApi } from "@/lib/api";
+import { Search, X, Check, Copy } from "lucide-react";
+import { TokenInfo, okxApi, CHAINS } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { useDebounce } from "@/lib/utils";
-
-// [설정] 빠른 접근 토큰 목록 (구조 예시, 실제 데이터로 교체 필요)
-// address는 해당 체인의 실제 주소여야 작동합니다.
-const QUICK_TOKENS = [
-  { symbol: "ETH", name: "Ethereum", isNative: true },
-  { symbol: "USDT", name: "Tether USD" },
-  { symbol: "USDC", name: "USD Coin" },
-  { symbol: "WBTC", name: "Wrapped BTC" },
-];
 
 interface Props {
   isOpen: boolean;
@@ -40,7 +31,7 @@ export default function TokenSelector({
 
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  // 모달 초기화
+  // 모달 열릴 때 초기화
   useEffect(() => {
     if (isOpen) {
       setActiveChainId(selectedChainId);
@@ -85,33 +76,15 @@ export default function TokenSelector({
   };
 
   const handleTokenSelect = (token: TokenInfo) => {
-    // [수정] 방어 로직 추가: 주소가 유효한지 확인
     if (!token || !token.address) {
-      console.error("Invalid token selected:", token);
-      alert("Invalid token data. Please try searching again.");
+      alert("Invalid token data.");
       return;
     }
-
-    // Decimals가 0이거나 이상할 경우 경고 (개발용)
-    if (token.decimals === undefined || token.decimals === null) {
-      console.warn(
-        "Token decimals missing, defaulting to 18 in parent might fail."
-      );
+    if (activeChainId !== selectedChainId) {
+      onSelectChain(activeChainId);
     }
-
     onSelect(token);
     onClose();
-  };
-
-  // Quick Token 클릭 핸들러 (현재 로드된 목록에서 찾아서 선택)
-  const handleQuickSelect = (symbol: string) => {
-    const target = tokens.find((t) => t.symbol === symbol);
-    if (target) {
-      handleTokenSelect(target);
-    } else {
-      // 목록에 없을 경우 검색어로 입력해줌
-      setSearchQuery(symbol);
-    }
   };
 
   return (
@@ -123,169 +96,164 @@ export default function TokenSelector({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"
           />
-
-          <div className="fixed inset-0 z-[70] flex items-center justify-center pointer-events-none p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="w-full max-w-2xl rounded-3xl overflow-hidden pointer-events-auto flex h-[700px] max-h-[85vh] bg-[#121212] border border-white/10 shadow-2xl"
-            >
-              {/* Networks Sidebar */}
-              <div className="w-[140px] md:w-[180px] border-r border-white/10 flex flex-col bg-[#0a0a0a]">
-                <div className="p-4 border-b border-white/10">
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Networks
-                  </h3>
-                </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                  {CHAINS.map((chain) => (
-                    <button
-                      key={chain.id}
-                      onClick={() => {
-                        setActiveChainId(chain.id);
-                        setSearchQuery("");
-                      }}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
-                        activeChainId === chain.id
-                          ? "bg-white/10 text-white shadow-sm border border-white/10 font-bold"
-                          : "text-gray-500 hover:bg-white/5 hover:text-gray-300"
-                      }`}
-                    >
-                      <img
-                        src={chain.logo}
-                        alt={chain.name}
-                        className="w-6 h-6 rounded-full"
-                      />
-                      <span className="text-sm truncate">{chain.name}</span>
-                    </button>
-                  ))}
-                </div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            // [변경] 2단 구조를 위해 너비 확장 (max-w-md -> max-w-4xl)
+            className="fixed inset-0 z-[70] m-auto w-full max-w-4xl h-[650px] max-h-[90vh] glass-panel rounded-3xl flex shadow-2xl overflow-hidden border border-white/10"
+          >
+            {/* 1. Left Sidebar: Chain Selection */}
+            <div className="w-20 md:w-64 flex flex-col border-r border-white/5 bg-black/20 backdrop-blur-md">
+              <div className="p-4 md:p-6 border-b border-white/5">
+                <h3 className="text-xs font-bold text-gray-500 uppercase hidden md:block">
+                  Networks
+                </h3>
+                <h3 className="text-xs font-bold text-gray-500 uppercase md:hidden text-center">
+                  Net
+                </h3>
               </div>
+              <div className="flex-1 overflow-y-auto p-2 scrollbar-hide space-y-1">
+                {CHAINS.map((chain) => (
+                  <button
+                    key={chain.id}
+                    onClick={() => setActiveChainId(chain.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+                      activeChainId === chain.id
+                        ? "bg-white/10 text-white shadow-inner border border-white/5"
+                        : "text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent"
+                    }`}
+                  >
+                    <img
+                      src={chain.logo}
+                      alt={chain.name}
+                      className="w-8 h-8 md:w-6 md:h-6 rounded-full bg-white/10"
+                    />
+                    <span className="font-bold text-sm hidden md:block truncate">
+                      {chain.name}
+                    </span>
+                    {activeChainId === chain.id && (
+                      <div className="ml-auto w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)] hidden md:block" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-              {/* Main Token List */}
-              <div className="flex-1 flex flex-col min-w-0 bg-[#121212]">
-                <div className="p-5 border-b border-white/10 flex items-center justify-between shrink-0">
-                  <h3 className="text-xl font-bold tracking-tight text-white">
+            {/* 2. Right Content: Token Selection */}
+            <div className="flex-1 flex flex-col min-w-0 bg-transparent">
+              {/* Header */}
+              <div className="p-4 md:p-6 border-b border-white/5 space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-black text-white">
                     Select Token
-                  </h3>
+                  </h2>
                   <button
                     onClick={onClose}
-                    className="p-2 rounded-full hover:bg-white/10 text-white"
+                    className="p-2 hover:bg-white/10 rounded-full transition-colors"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-5 h-5 text-gray-400" />
                   </button>
                 </div>
 
-                <div className="p-4 pb-2 shrink-0 space-y-4">
-                  <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                    <input
-                      type="text"
-                      placeholder="Search name or paste address"
-                      className="w-full h-12 pl-11 pr-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-medium placeholder-gray-500 text-white focus:border-blue-500/50 transition-all"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      autoFocus
-                    />
-                  </div>
-
-                  {/* [신규] Quick Access Section */}
-                  {!searchQuery && (
-                    <div className="flex flex-wrap gap-2">
-                      {QUICK_TOKENS.map((qt) => (
-                        <button
-                          key={qt.symbol}
-                          onClick={() => handleQuickSelect(qt.symbol)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 transition-colors text-xs font-bold text-gray-300 hover:text-white"
-                        >
-                          <Star className="w-3 h-3 text-yellow-500/80 fill-yellow-500/20" />
-                          {qt.symbol}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                {/* Search Input */}
+                <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
+                  <input
+                    type="text"
+                    placeholder="Search name, symbol or address"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-black/20 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 focus:bg-black/30 transition-all font-medium"
+                    autoFocus
+                  />
                 </div>
+              </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                  {isLoading ? (
-                    <div className="text-center py-20 text-gray-500 flex flex-col items-center gap-3">
-                      <div className="w-6 h-6 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin" />
-                      <span className="text-sm">Loading Token List...</span>
-                    </div>
-                  ) : tokens.length === 0 ? (
-                    <div className="text-center py-20 text-gray-500 text-sm">
-                      No tokens found
-                    </div>
-                  ) : (
-                    tokens.map((token) => (
+              {/* Token List */}
+              <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-500">
+                    <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm font-medium">
+                      Loading tokens...
+                    </span>
+                  </div>
+                ) : tokens.length > 0 ? (
+                  <div className="grid gap-1 px-2 pb-2">
+                    {tokens.map((token) => (
                       <button
                         key={`${token.chainId}-${token.address}`}
                         onClick={() => handleTokenSelect(token)}
-                        className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all group ${
-                          selectedToken?.address === token.address &&
-                          selectedToken?.chainId === token.chainId
-                            ? "bg-blue-500/10 border border-blue-500/20"
-                            : "hover:bg-white/5 border border-transparent"
+                        className={`group flex items-center justify-between p-3 rounded-xl transition-all ${
+                          selectedToken?.address === token.address
+                            ? "bg-blue-500/10 border border-blue-500/30"
+                            : "hover:bg-white/5 border border-transparent hover:border-white/5"
                         }`}
                       >
-                        <div className="flex items-center gap-4 overflow-hidden min-w-0">
-                          {token.logoURI ? (
-                            <img
-                              src={token.logoURI}
-                              alt={token.symbol}
-                              className="w-10 h-10 rounded-full bg-white/10 shrink-0"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-sm font-bold text-white shrink-0">
-                              {token.symbol[0]}
-                            </div>
-                          )}
-                          <div className="text-left min-w-0 flex flex-col gap-0.5">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-lg text-white truncate">
+                        <div className="flex items-center gap-4 overflow-hidden">
+                          <div className="relative shrink-0">
+                            {token.logoURI ? (
+                              <img
+                                src={token.logoURI}
+                                alt={token.symbol}
+                                className="w-10 h-10 rounded-full bg-gray-800 object-cover shadow-lg group-hover:scale-105 transition-transform"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-xs font-bold text-gray-400">
+                                {token.symbol.slice(0, 2)}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col items-start min-w-0">
+                            <div className="flex items-center gap-2 max-w-full">
+                              <span className="text-base font-bold text-white truncate">
                                 {token.symbol}
                               </span>
-                              {token.isNative && (
-                                <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1 rounded font-bold">
-                                  NATIVE
-                                </span>
-                              )}
+                              <span className="text-xs text-gray-500 truncate hidden sm:block">
+                                {token.name}
+                              </span>
                             </div>
-                            <div className="text-sm text-gray-500 font-medium truncate">
-                              {token.name}
+
+                            {/* Contract Address Display */}
+                            <div className="flex items-center gap-1.5 mt-0.5 max-w-full">
+                              <span className="text-[10px] font-mono text-gray-500 bg-white/5 px-1.5 py-0.5 rounded flex items-center gap-1 group-hover:bg-white/10 transition-colors">
+                                {token.address.slice(0, 6)}...
+                                {token.address.slice(-4)}
+                                <button
+                                  onClick={(e) => handleCopy(e, token.address)}
+                                  className="ml-1 hover:text-white transition-colors"
+                                  title="Copy Address"
+                                >
+                                  {copiedAddress === token.address ? (
+                                    <Check className="w-3 h-3 text-green-400" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                </button>
+                              </span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="text-right pl-4">
-                          {token.price && parseFloat(token.price) > 0 && (
-                            <div className="text-sm font-medium text-white">
-                              ${parseFloat(token.price).toLocaleString()}
-                            </div>
-                          )}
-                          {token.change24h && (
-                            <div
-                              className={`text-xs ${
-                                parseFloat(token.change24h) >= 0
-                                  ? "text-green-500"
-                                  : "text-red-500"
-                              }`}
-                            >
-                              {parseFloat(token.change24h) > 0 ? "+" : ""}
-                              {parseFloat(token.change24h).toFixed(2)}%
-                            </div>
-                          )}
-                        </div>
+                        {selectedToken?.address === token.address && (
+                          <Check className="w-5 h-5 text-blue-400 mr-2" />
+                        )}
                       </button>
-                    ))
-                  )}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-2">
+                    <Search className="w-10 h-10 opacity-20" />
+                    <p>No tokens found</p>
+                  </div>
+                )}
               </div>
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
         </>
       )}
     </AnimatePresence>

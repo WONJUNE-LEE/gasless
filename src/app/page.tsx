@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown,
@@ -15,6 +15,8 @@ import {
   Droplets,
   Wallet,
   Route as RouteIcon,
+  Copy,
+  Check,
 } from "lucide-react";
 import {
   useAccount,
@@ -48,7 +50,6 @@ const SLIPPAGE_OPTIONS = [
 ];
 
 export default function Home() {
-  // [수정 1] Hydration 에러 방지를 위한 마운트 상태 추가
   const [isMounted, setIsMounted] = useState(false);
 
   // Wagmi Hooks
@@ -65,6 +66,7 @@ export default function Home() {
 
   const [chartData, setChartData] = useState<any[]>([]);
   const [isChartLoading, setIsChartLoading] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [timeframe, setTimeframe] = useState("1D");
 
   const [amount, setAmount] = useState("");
@@ -89,6 +91,7 @@ export default function Home() {
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
   const [needsApprove, setNeedsApprove] = useState(false);
   const [dexRouterAddress, setDexRouterAddress] = useState<string | null>(null);
+  const [isAddressCopied, setIsAddressCopied] = useState(false);
 
   // Derived Variables
   const displayTokenA = tokenA || PLACEHOLDER_TOKEN;
@@ -151,7 +154,6 @@ export default function Home() {
     }
   }, [isConnected, walletChainId]);
 
-  // [수정 2] 컴포넌트 마운트 시 isMounted true로 설정
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -214,30 +216,77 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chainId]);
 
-  // Load Chart
+  // Load Chart (Initial)
   useEffect(() => {
     if (!tokenA) return;
     const loadChart = async () => {
       setIsChartLoading(true);
-      const candles = await okxApi.getCandles(
-        chainId,
-        tokenA.address,
-        timeframe
-      );
-      const formatted = candles.map((c: any) => ({
-        time: c.time,
-        open: parseFloat(c.open),
-        high: parseFloat(c.high),
-        low: parseFloat(c.low),
-        close: parseFloat(c.close),
-        value: c.volUsd,
-      }));
-      setChartData(formatted);
-      setIsChartLoading(false);
-      if (tokenA.price && !limitPrice) setLimitPrice(tokenA.price);
+      try {
+        const candles = await okxApi.getCandles(
+          chainId,
+          tokenA.address,
+          timeframe
+        );
+        const formatted = candles.map((c: any) => ({
+          time: c.time,
+          open: parseFloat(c.open),
+          high: parseFloat(c.high),
+          low: parseFloat(c.low),
+          close: parseFloat(c.close),
+          value: c.volUsd,
+        }));
+        // [수정] 초기 데이터도 정렬 및 중복 제거
+        formatted.sort((a: any, b: any) => a.time - b.time);
+        setChartData(formatted);
+        if (tokenA.price && !limitPrice) setLimitPrice(tokenA.price);
+      } catch (e) {
+        console.error("Failed to load chart", e);
+      } finally {
+        setIsChartLoading(false);
+      }
     };
     loadChart();
   }, [tokenA, timeframe, chainId]);
+
+  // Load History (Infinite Scroll)
+  const handleLoadMoreHistory = async () => {
+    if (!tokenA || isHistoryLoading || chartData.length === 0) return;
+    setIsHistoryLoading(true);
+    try {
+      const oldestTime = chartData[0].time;
+      const history = await okxApi.getCandles(
+        chainId,
+        tokenA.address,
+        timeframe,
+        oldestTime
+      );
+
+      if (history.length > 0) {
+        const formattedHistory = history.map((c: any) => ({
+          time: c.time,
+          open: parseFloat(c.open),
+          high: parseFloat(c.high),
+          low: parseFloat(c.low),
+          close: parseFloat(c.close),
+          value: c.volUsd,
+        }));
+
+        // [수정] 데이터 병합 시 중복 제거 및 시간순 정렬 강제 (Assertion failed 방지)
+        setChartData((prev) => {
+          const merged = [...formattedHistory, ...prev];
+          const uniqueMap = new Map();
+          merged.forEach((item) => uniqueMap.set(item.time, item));
+          const unique = Array.from(uniqueMap.values());
+          unique.sort((a: any, b: any) => a.time - b.time);
+          return unique;
+        });
+      }
+    } catch (e) {
+      console.error("Failed to load history", e);
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  };
 
   // Fetch Quote & Check Allowance
   useEffect(() => {
@@ -270,7 +319,6 @@ export default function Home() {
         if (!data) throw new Error("No data received");
         setQuoteData(data);
 
-        // Get Router Address
         if (
           !dexRouterAddress &&
           !fromToken.isNative &&
@@ -305,7 +353,6 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [amount, tokenA, tokenB, activeTab, chainId, orderType, slippage]);
 
-  // Calculate NeedsApprove
   useEffect(() => {
     if (
       currentPayToken.isNative ||
@@ -322,7 +369,6 @@ export default function Home() {
     setNeedsApprove(allowance < amountWei);
   }, [allowance, amount, currentPayToken, dexRouterAddress]);
 
-  // Handlers
   const handleSelectToken = (token: TokenInfo) => {
     if (token.chainId !== chainId) {
       setChainId(token.chainId);
@@ -405,6 +451,14 @@ export default function Home() {
     : 0;
   const totalCostValue = amount ? parseFloat(amount) * payTokenPrice : 0;
 
+  const copyAddress = () => {
+    if (displayTokenA.address) {
+      navigator.clipboard.writeText(displayTokenA.address);
+      setIsAddressCopied(true);
+      setTimeout(() => setIsAddressCopied(false), 2000);
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 lg:p-8 max-w-7xl min-h-screen flex flex-col gap-6">
       {/* 1. Header (Current Chain & Chart Token) */}
@@ -439,6 +493,21 @@ export default function Home() {
                 <span className="text-gray-500 text-lg font-bold">/ USD</span>
                 <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" />
               </h1>
+              {/* [추가] 토큰 컨트랙트 주소 표시 */}
+              <div
+                className="flex items-center gap-2 text-xs text-gray-500 font-mono mt-1 hover:text-gray-300 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyAddress();
+                }}
+              >
+                <span>{displayTokenA.address}</span>
+                {isAddressCopied ? (
+                  <Check className="w-3 h-3 text-green-400" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
+              </div>
             </div>
           </button>
         </div>
@@ -509,10 +578,17 @@ export default function Home() {
                 Chart...
               </div>
             ) : (
-              <div className="w-full h-full pb-2">
+              <div className="w-full h-full pb-2 relative">
+                {isHistoryLoading && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-black/50 px-3 py-1 rounded-full text-xs text-white backdrop-blur flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Loading
+                    History...
+                  </div>
+                )}
                 <NativeChart
                   data={chartData}
                   colors={{ textColor: "#737373" }}
+                  onLoadMore={handleLoadMoreHistory}
                 />
               </div>
             )}
@@ -597,7 +673,6 @@ export default function Home() {
                   <div className="flex items-center gap-1 text-gray-400">
                     <Wallet className="w-3 h-3" />
                     <span>
-                      {/* [수정 3] balanceData Hydration 보호 */}
                       {isMounted && balanceData
                         ? parseFloat(balanceData.formatted).toLocaleString(
                             undefined,
@@ -606,7 +681,6 @@ export default function Home() {
                         : "0"}
                     </span>
                   </div>
-                  {/* [수정 4] 버튼 Hydration 보호 */}
                   {isMounted && balanceData && (
                     <button
                       onClick={handleMax}

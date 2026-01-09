@@ -6,8 +6,8 @@ import {
   ColorType,
   IChartApi,
   CrosshairMode,
-  CandlestickSeries, // [추가] v5 필수 import
-  HistogramSeries, // [추가] v5 필수 import
+  CandlestickSeries,
+  HistogramSeries,
 } from "lightweight-charts";
 
 interface ChartData {
@@ -29,11 +29,17 @@ interface Props {
     areaTopColor?: string;
     areaBottomColor?: string;
   };
+  onLoadMore?: () => void;
 }
 
-export default function NativeChart({ data, colors }: Props) {
+export default function NativeChart({ data, colors, onLoadMore }: Props) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const candleSeriesRef = useRef<any>(null);
+  const volumeSeriesRef = useRef<any>(null);
+
+  // [추가] 쓰로틀링을 위한 마지막 호출 시간 기록용 Ref
+  const lastFetchTimeRef = useRef<number>(0);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -53,22 +59,16 @@ export default function NativeChart({ data, colors }: Props) {
       crosshair: {
         mode: CrosshairMode.Normal,
       },
-      rightPriceScale: {
-        borderColor: "rgba(255, 255, 255, 0.1)",
-        scaleMargins: {
-          top: 0.1, // 캔들 영역 (위쪽 90% 사용)
-          bottom: 0.2, // 아래쪽 볼륨 영역 확보
-        },
-      },
       timeScale: {
         borderColor: "rgba(255, 255, 255, 0.1)",
         timeVisible: true,
       },
+      rightPriceScale: {
+        borderColor: "rgba(255, 255, 255, 0.1)",
+      },
     });
 
-    chartRef.current = chart;
-
-    // 2. 캔들스틱 시리즈 추가 (v5 방식: addSeries 사용)
+    // 2. 시리즈 추가
     const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: "#22c55e",
       downColor: "#ef4444",
@@ -77,55 +77,79 @@ export default function NativeChart({ data, colors }: Props) {
       wickDownColor: "#ef4444",
     });
 
-    // 3. 볼륨 시리즈 (히스토그램) 추가 (v5 방식: addSeries 사용)
     const volumeSeries = chart.addSeries(HistogramSeries, {
+      color: "#26a69a",
       priceFormat: {
         type: "volume",
       },
-      priceScaleId: "", // 메인 가격 스케일과 분리 (Overlay)
+      priceScaleId: "",
     });
 
-    // 볼륨 스케일 조정 (차트 하단에 위치하도록)
     volumeSeries.priceScale().applyOptions({
       scaleMargins: {
-        top: 0.85, // 차트의 아래쪽 15%만 사용
+        top: 0.8,
         bottom: 0,
       },
     });
 
-    // 데이터 변환 및 설정
-    const candleData = data.map((d) => ({
-      time: d.time as any,
-      open: d.open,
-      high: d.high,
-      low: d.low,
-      close: d.close,
-    }));
+    chartRef.current = chart;
+    candleSeriesRef.current = candleSeries;
+    volumeSeriesRef.current = volumeSeries;
 
-    const volumeData = data.map((d) => ({
-      time: d.time as any,
-      value: d.value || 0, // value가 없으면 0 처리
-      color:
-        d.close >= d.open ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)",
-    }));
-
-    candleSeries.setData(candleData);
-    volumeSeries.setData(volumeData);
-
-    // 차트 리사이즈 핸들러
+    // 3. 리사이즈 핸들러
     const handleResize = () => {
       if (chartContainerRef.current) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+        chart.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight,
+        });
+      }
+    };
+    window.addEventListener("resize", handleResize);
+
+    // [수정] 4. 무한 스크롤 핸들러 (쓰로틀링 적용)
+    const timeScale = chart.timeScale();
+
+    const handleVisibleRangeChange = () => {
+      const logicalRange = timeScale.getVisibleLogicalRange();
+      // 왼쪽 끝(과거)에 도달했는지 확인 (from < 0)
+      if (logicalRange && logicalRange.from < 0) {
+        const now = Date.now();
+        // [핵심] 1.5초(1500ms) 쿨타임 적용. 이 시간 내에는 재요청하지 않음.
+        if (now - lastFetchTimeRef.current > 1500) {
+          lastFetchTimeRef.current = now;
+          if (onLoadMore) {
+            // console.log("Loading more history...");
+            onLoadMore();
+          }
+        }
       }
     };
 
-    window.addEventListener("resize", handleResize);
+    timeScale.subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      // 이벤트 구독 해제
+      timeScale.unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
       chart.remove();
     };
-  }, [data, colors]);
+  }, []); // 초기화는 한 번만
+
+  // 5. 데이터 업데이트
+  useEffect(() => {
+    if (!candleSeriesRef.current || !volumeSeriesRef.current) return;
+
+    candleSeriesRef.current.setData(data);
+
+    const volumeData = data.map((d) => ({
+      time: d.time,
+      value: d.value,
+      color:
+        d.close >= d.open ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)",
+    }));
+    volumeSeriesRef.current.setData(volumeData);
+  }, [data]);
 
   return <div ref={chartContainerRef} className="w-full h-full" />;
 }

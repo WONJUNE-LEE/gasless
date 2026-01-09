@@ -114,10 +114,14 @@ export const okxApi = {
   getCandles: async (
     chainId: number,
     tokenAddress: string,
-    timeframe: string
+    timeframe: string,
+    after?: number // [추가] 과거 데이터 페이징용 (timestamp)
   ) => {
     try {
-      const url = `/api/chart?chainId=${chainId}&tokenAddress=${tokenAddress}&timeframe=${timeframe}`;
+      let url = `/api/chart?chainId=${chainId}&tokenAddress=${tokenAddress}&timeframe=${timeframe}`;
+      if (after) {
+        url += `&after=${after}`;
+      }
       const res = await fetch(url);
       if (!res.ok) return [];
       return await res.json();
@@ -139,7 +143,6 @@ export const okxApi = {
       const res = await fetch(url);
       const data = await res.json();
       if (data.error) {
-        // 상세 에러 내용을 포함하여 에러 발생
         throw new Error(
           `${data.error}${data.details ? ": " + data.details : ""}`
         );
@@ -147,7 +150,7 @@ export const okxApi = {
       return data;
     } catch (e) {
       console.error("getQuote error:", e);
-      throw e; // 호출부에서 잡을 수 있게 다시 throw
+      throw e;
     }
   },
 
